@@ -1,0 +1,155 @@
+# Compressor simulator parameters — Ariel JGH/4, CAT G3516LE, REMVue 500S
+# All values from APP_SPEC.md section 3.1 / compressor_lite_reference.py.
+# Pressures are psig, temperatures are degF, unless noted. physics.py converts
+# to SI (Pa abs, K) at load time.
+
+gas:
+  R_sp: 345.5          # J/(kg K)
+  n_exp: 1.2693        # polytropic exponent
+  e_T: 0.2122           # (n-1)/n
+
+compressor:
+  V_disp: 0.023258     # m3/rev, stage 1 double-acting
+  clearance: 0.078
+  L_slip: 0.04
+  K_cap: 1.0
+
+volumes:
+  V_s: 3.0              # m3 suction volume
+  V_d: 4.5               # m3 discharge volume (lumped)
+
+flow_coefficients:
+  K_suc: 2.10e-3         # supply into suction
+  K_byp: 1.50e-3          # bypass, discharge to suction
+  K_proc: 1.335e-4         # discharge to pipeline
+  K_bdv: 4.00e-3          # blowdown to atmosphere
+
+boundaries:
+  P_src_psig: 60.0        # source boundary
+  P_proc_psig: 1050.0      # pipeline boundary
+  T_suc_F: 100.0            # inlet gas
+  T_amb_F: 90.0              # ambient
+
+speed:
+  N_crank_term: 200.0
+  N_idle: 650.0
+  N_min_load: 850.0
+  N_max_load: 1000.0
+  rate_N_up: 50.0
+  rate_N_dn: 75.0
+  rate_crank: 70.0
+  tau_coast: 6.0
+
+valves:
+  # (open rate, close rate) %/s
+  rate_byp: [5.0, 15.0]
+  rate_suc: [5.0, 5.0]
+  rate_esd: [20.0, 20.0]
+  rate_bdv: [50.0, 50.0]
+  K_valve: 20.0
+
+oil:
+  P_oil_run_psig: 120.0
+  P_oil_prelube_psig: 55.0
+  P_oil_fault_psig: 25.0
+  tau_oil_p: 3.0
+  # lube_slow fault time constant (section 5). 900s puts the 10 psi start
+  # permissive crossing at ~180.7s from a prelube target of 55 psig (55*(1-
+  # e^(-180.7/900)) = 10) — a deliberate 60s margin past the PLC's 120s Oil
+  # Permissive Pressure Fault Timer, not a knife edge. 600s was tried first
+  # and only crossed at 120.5s: 0.5s of margin means any small change to
+  # the oil target, the 10psi threshold, or the timer itself flips whether
+  # the fault actually busts the timer, so the fault would trip
+  # intermittently. 900s trips it deterministically instead.
+  tau_oil_slow: 900.0
+  tau_eoil: 400.0
+  T_eoil_run_F: 190.0
+
+cooling:
+  # indexed by number of cooler fans running: 0, 1, 2
+  T_inter_fans_F: [140.0, 120.0, 105.0]
+  T_ac_fans_F: [175.0, 130.0, 110.0]
+  T_oil_fans_F: [200.0, 200.0, 160.0]
+  tau_T_cyl: 45.0
+  tau_T_oil: 300.0
+  tau_T_ac: 60.0
+
+# Instrumentation-boundary constants (tags.py) — never used by physics.py's
+# ODEs, section 9's "no control logic" / section 4's "clamping location"
+# both keep this kind of thing out of the physics module.
+instrumentation:
+  # Per-cylinder static calibration offset, deg F, added to TT_2004-2007
+  # before clamping. The lite model's 2 discharge-temp lag states (T_d1,
+  # T_d2, section 3) cover 3 compression stages / 4 cylinders, so without
+  # this TT_2006 and TT_2007 read bit-for-bit identical to TT_2005 — no two
+  # real transmitters on nominally identical cylinders agree that closely.
+  cyl_temp_offset_F: [0.0, 0.0, 3.0, -2.0]
+  # First-order lag on the cooler run status feedback tags (RS_4011/4012),
+  # standing in for contactor pickup/dropout time.
+  status_feedback_tau_s: 1.0
+
+# CAT G3516LE engine-side signals with no dedicated integrator state (section
+# 3 only tracks T_eoil, engine oil TEMPERATURE — not JW temp or engine oil
+# PRESSURE, a separate circuit from the compressor's own PT_1005/P_oil).
+# Derived algebraically from existing states in tags.py rather than adding
+# new integrator states, so the validated 14-state design point is
+# untouched.
+engine:
+  jw_offset_F: -15.0     # jacket water runs a bit cooler than lube oil
+  oil_run_psig: 60.0     # CAT ADEM engine oil pressure at rated speed
+
+# OPC UA client target — APP_SPEC.md section 2.1: the app is the client,
+# CODESYS's built-in server is the server. browse_path_prefix is the object
+# path (browse names, "nsidx:name") traversed from the Objects node before
+# each tag's own browse name; adjust to match the PLC project's variable
+# tree. namespace_uri identifies the tag variables' own namespace (usually
+# the PLC project's, not the server's default ns0/ns1).
+opcua:
+  endpoint: "opc.tcp://localhost:4840"
+  namespace_uri: "urn:codesys:plc"
+  browse_path_prefix: ["2:PLC_PRG"]
+  watchdog_timeout_s: 2.0
+  # Node addressing mode. "browse" (default, matches tools/mock_plc.py's
+  # default mode) walks browse_path_prefix then each tag's own browse name
+  # under the namespace index. "node_id" instead builds each tag's NodeId
+  # directly from node_id_pattern below, for servers that expose symbols by
+  # string NodeId rather than a walkable Objects tree — CODESYS's own
+  # convention (browse_path_prefix/namespace_uri are unused in this mode).
+  node_addressing: "browse"
+  # {ns} -> namespace index resolved from namespace_uri, {tag} -> canonical
+  # tag name (section 4). Only used when node_addressing: "node_id". This
+  # is CODESYS's own symbol NodeId convention; adjust the GVL name to match
+  # the PLC project (tools/mock_plc.py --codesys uses this same pattern).
+  node_id_pattern: "ns={ns};s=|var|Device.Application.GVL_PLC.{tag}"
+  # Per-tag OPC UA variant type override — only needed where a real PLC's
+  # declared type differs from this app's implicit default (Double for any
+  # float tag, Boolean/Int64 as tools/mock_plc.py's _BOOL_TAGS/_INT_TAGS
+  # already assume). CODESYS REAL is a 32-bit Float, not a Double — writing
+  # a Double to it raises BadTypeMismatch, the same class of bug tags.py's
+  # _clamp() comment documents for int-vs-float. Empty by default (no
+  # override, existing Double behaviour unchanged); tools/mock_plc.py
+  # --codesys marks every analog tag Float here to test this before real
+  # hardware.
+  tag_types: {}
+
+# Alarm/trip setpoints — APP_SPEC.md section 4.5, from PN17481_IO_List_5.xls.
+# Display only: colours gauge badges and draws dashed trend lines. The app
+# never evaluates these — the PLC owns all alarm/shutdown logic.
+alarms:
+  # tag: [low_sd, low_alarm, high_alarm, high_sd]  (null where not applicable)
+  PT_1001: [27, 29, 31, 33]
+  PT_1002: [null, null, 182, 191]
+  PT_1003: [null, null, 499, 523]
+  PT_1004: [null, null, 1379, 1444]
+  PT_1006: [null, null, 1365, 1430]
+  PT_1005: [35, 40, 190, 200]
+  TT_2001: [null, null, 180, 190]
+  TT_2004: [null, null, 300, 315]
+  TT_2005: [null, null, 272, 285]
+  TT_2006: [null, null, 281, 295]
+  TT_2007: [null, null, 272, 285]
+  TT_2009: [null, null, 176, 194]
+  TT_2010: [null, null, 176, 194]
+  TT_2011: [null, null, 176, 194]
+  TT_2012: [null, null, 176, 194]
+  TT_2013: [null, null, 147, 154]

@@ -401,6 +401,96 @@ for 2 s, declare the link failed, apply all fail values, and show it in the UI.
 This is essential — a dropped OPC UA subscription is otherwise indistinguishable
 from a frozen process value.
 
+### 4.8 Extended tags (not in PN17481 I/O list)
+
+**Not sourced.** Every tag in this section was added to fill Tier 1/2 gaps
+found while building the fault panel and HMI — none of them trace to
+`PN17481_IO_List_5.xls` or the REMVue 500S Operating Philosophy the way
+sections 4.1-4.7 do. Tag numbers are invented, chosen only to follow the
+ISA-style prefixes already used elsewhere in this tag map (`PT_`, `TT_`,
+`ZS_`, `CMD_`, ...) so they read consistently. Treat this section as a
+starting point for the CODESYS GVL and for any future mapping to a real
+REMVue panel, not as a verified I/O point — confirm every number against
+the real panel's own I/O list before wiring hardware to it.
+
+**Direction**, as in section 4, is stated from the PLC's point of view.
+
+#### Operator pushbuttons and selectors — discrete inputs to PLC, app writes
+
+| Tag | Type | Behaviour | Stands in for |
+|---|---|---|---|
+| `PB_5001` | bool, momentary | pulses true ~400 ms on press | Unit Shutdown (USD) pushbutton |
+| `ESD_5002` | bool, maintained | holds until toggled off | Remote ESD input from a remote system/DCS |
+| `PB_5003` | bool, momentary | pulses true ~400 ms on press | Local stop pushbutton |
+| `PB_5004` | bool, momentary | pulses true ~400 ms on press | Remote stop pushbutton |
+
+`PB_5001` (USD) and `ESD_5002` (remote ESD) are deliberately separate tags,
+not one signal wearing two labels — the Operating Philosophy gives them
+different PLC behaviour (ESD opens the blowdown valve and skips postlube;
+USD does not), and the app has no control logic to enforce that
+distinction itself (section 1), so the PLC under test must see two
+independently-settable inputs to exercise both paths.
+
+All four are always live from the HMI regardless of OPC UA connection
+state (section 6.4) — real pushbuttons and a real remote-ESD relay are
+wired directly into the PLC's I/O, never routed through or overridden by
+an upstream OPC UA command the way `SC_3001`/`FC_3002`/etc. are.
+
+#### CAT ADEM engine ECU status — discrete inputs to PLC, app writes
+
+| Tag | Type | Stands in for |
+|---|---|---|
+| `XA_6002` | bool | CAT ADEM engine alarm output |
+| `XS_6003` | bool | CAT ADEM engine failure shutdown output |
+
+Manually toggled from the HMI (section 6.4's Overrides tab) — the app
+models no ADEM controller, so these exist purely to let a tester assert
+the ECU's own status independent of anything the process physics derives.
+
+#### Cooler motor run status feedback — discrete inputs to PLC, app writes
+
+| Tag | Type | Behaviour | Stands in for |
+|---|---|---|---|
+| `RS_4011` | bool | first-order lag (~1 s, config `instrumentation.status_feedback_tau_s`) on the effective `CMD_4011` | Cooler motor 1 running auxiliary contact |
+| `RS_4012` | bool | same, on `CMD_4012` | Cooler motor 2 running auxiliary contact |
+
+"Effective" command means section 5's `cooler_trip` fault is already
+folded in — a tripped motor's feedback lags down to false even though the
+PLC still commands it on, same as a real thermal-overload trip would
+present to a run-status auxiliary contact.
+
+#### Engine-side analog measurements — analog inputs to PLC, app writes
+
+| Tag | Range/units | Source state | Stands in for |
+|---|---|---|---|
+| `TT_2014` | 0-300 °F | `T_eoil` (already-modelled engine oil temperature) minus a fixed offset (config `engine.jw_offset_F`, default -15 °F) | Engine jacket water (JW) temperature |
+| `PT_1007` | 0-150 psig | `P_oil` (compressor's own oil-pressure state, section 3) scaled to the engine's rated pressure (config `engine.oil_run_psig`, default 60 psig) | CAT engine oil pressure — a separate lube circuit from the compressor frame's `PT_1005` |
+
+Both are derived algebraically from states section 3 already tracks
+rather than new integrator states, so they inherit realistic startup/
+shutdown dynamics without touching the validated 14-state design point.
+
+#### Tier 2 discrete faults — discrete inputs to PLC, app writes
+
+Simple "true while armed" switches, no dynamics, all driven from the
+fault panel (section 5's pattern, more of it):
+
+| Tag | Stands in for |
+|---|---|
+| `LSH_7001` | Suction scrubber level high |
+| `LSH_7002` | ST2 scrubber level high |
+| `LSH_7003` | ST3 scrubber level high |
+| `LSH_7004` | Fuel gas scrubber level high |
+| `VSH_7011` | Compressor frame vibration trip |
+| `VSH_7012` | Engine vibration trip |
+| `VSH_7013` | Skid/piping vibration trip |
+| `LSL_7021` | Compressor oil level low |
+| `LSL_7022` | Engine oil level low |
+| `LSL_7023` | Engine JW/coolant level low |
+| `PSL_7031` | Fuel gas pressure low |
+| `FSL_7041` | Cylinder lubricator bank 1 no-flow |
+| `FSL_7042` | Cylinder lubricator bank 2 no-flow |
+
 ---
 
 ## 5. Fault injection

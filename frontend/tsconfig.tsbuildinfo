@@ -1,0 +1,1 @@
+{"root":["./src/App.tsx","./src/main.tsx","./src/components/FaultPanel.tsx","./src/components/ManualOverridePanel.tsx","./src/components/PidDiagram.tsx","./src/components/Tabs.tsx","./src/components/TagTable.tsx","./src/components/TrendChart.tsx","./src/hooks/useSimState.ts","./src/lib/pid.ts"],"version":"5.9.3"}

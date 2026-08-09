@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc *)",
+      "Bash(python3 -c \"import fastapi, uvicorn\")",
+      "Bash(nohup python3 -m uvicorn app.server:app --host 0.0.0.0 --port 8000)",
+      "Read(//tmp/**)",
+      "Bash(curl -s localhost:8000/ -o /dev/null -w \"%{http_code}\\\\n\")",
+      "Bash(git stash *)",
+      "Bash(cp /home/anas-alanqar/compressor-sim/frontend/src/components/PidDiagram.tsx /tmp/PidDiagram.new.tsx)",
+      "Bash(node /tmp/shot2.js \"/tmp/claude-1000/-home-anas-alanqar-compressor-sim/9d87aab9-9af2-49b6-bf16-bb7c824b883a/scratchpad/before_zoom.png\")",
+      "Bash(node /tmp/shot2.js \"/tmp/claude-1000/-home-anas-alanqar-compressor-sim/9d87aab9-9af2-49b6-bf16-bb7c824b883a/scratchpad/after_zoom2.png\")"
+    ],
+    "additionalDirectories": [
+      "/tmp"
+    ]
+  }
+}
