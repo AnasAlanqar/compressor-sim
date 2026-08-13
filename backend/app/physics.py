@@ -10,10 +10,11 @@ is algebra recomputed every step. Contains no control logic — see
 APP_SPEC.md section 1 and section 9.
 """
 from dataclasses import dataclass, field
-from pathlib import Path
 
 import numpy as np
 import yaml
+
+from .. import paths
 
 P_ATM = 101325.0
 
@@ -151,7 +152,7 @@ def load_params(path) -> P:
     )
 
 
-DEFAULT_CONFIG = Path(__file__).resolve().parent.parent / 'config.yaml'
+DEFAULT_CONFIG = paths.config_path()
 
 
 # ---- 10 states -------------------------------------------------------------

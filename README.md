@@ -117,6 +117,14 @@ Pass `--codesys` to mimic CODESYS's own NodeId addressing and typing
 conventions (32-bit `Float` analog tags, string NodeIds) instead of the
 default browse-path mode.
 
+### Desktop app (Windows)
+
+The dev setup above (separate Vite + uvicorn processes) is for active
+development only. For a real deployment — a Windows laptop next to a PLC,
+no Python/Node visible to the end user — see
+[docs/DESKTOP_APP.md](docs/DESKTOP_APP.md): builds a single
+`CompressorSim-Setup.exe` installer via PyInstaller + Inno Setup.
+
 ### Tests
 
 ```bash

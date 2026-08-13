@@ -13,3 +13,14 @@ dist/
 
 .env
 
+.local/
+
+build/
+
+*.spec.bak
+
+installer_output/
+
+redist/
+
+

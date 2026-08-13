@@ -13,8 +13,10 @@ import time
 
 import yaml
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.responses import HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
 
+from .. import paths
 from . import faults as flts
 from . import opcua_link
 from . import physics as ph
@@ -393,6 +395,21 @@ ws.onmessage = (ev) => {
 """
 
 
-@app.get("/", response_class=HTMLResponse)
-async def index():
-    return TRIVIAL_PAGE
+FRONTEND_DIR = paths.frontend_dist_path()
+
+if FRONTEND_DIR.exists():
+    # Production/desktop: the built React app, served by this same process
+    # (packaging spec Part A1). Registered last so it never shadows the
+    # /api, /ws routes above — Starlette matches routes in registration
+    # order, first match wins.
+    app.mount("/assets", StaticFiles(directory=FRONTEND_DIR / "assets"), name="assets")
+
+    @app.get("/{full_path:path}")
+    async def spa_fallback(full_path: str):
+        return FileResponse(FRONTEND_DIR / "index.html")
+else:
+    # Dev without a frontend build (npm run build not yet run): fall back
+    # to the raw-state diagnostic page instead of a 404 on "/".
+    @app.get("/", response_class=HTMLResponse)
+    async def index():
+        return TRIVIAL_PAGE

@@ -1,0 +1,179 @@
+"""
+Desktop launcher — the PyInstaller entry point (compressor_sim.spec).
+
+Runs the existing FastAPI app (backend/app/server.py, unchanged) in a
+background thread on an ephemeral localhost port, then opens a native
+WebView2 window pointed at it. See docs' "Desktop packaging" notes for the
+overall design (pywebview + PyInstaller, --onedir).
+
+Windows-only: %LOCALAPPDATA%, WebView2 (gui="edgechromium"), and the
+Windows stale-lock check below all assume Windows. This is the only
+supported target (see README) — no Linux/macOS branches.
+"""
+import atexit
+import ctypes
+import logging
+import os
+import socket
+import sys
+import threading
+import time
+from logging.handlers import RotatingFileHandler
+
+from backend import paths
+
+log = logging.getLogger("compressor_sim.desktop")
+
+
+def setup_logging() -> None:
+    """console=False in the frozen build means there is no terminal to see
+    tracebacks in — everything must go to a file, or a crash is
+    undebuggable (packaging spec A5)."""
+    handler = RotatingFileHandler(
+        paths.log_dir() / "app.log", maxBytes=2_000_000, backupCount=3, encoding="utf-8"
+    )
+    handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s"))
+    root = logging.getLogger()
+    root.setLevel(logging.INFO)
+    root.addHandler(handler)
+
+
+def _pid_alive(pid: int) -> bool:
+    if sys.platform == "win32":
+        h = ctypes.windll.kernel32.OpenProcess(0x1000, False, pid)  # PROCESS_QUERY_LIMITED_INFORMATION
+        if h:
+            ctypes.windll.kernel32.CloseHandle(h)
+            return True
+        return False
+    try:
+        os.kill(pid, 0)
+    except OSError:
+        return False
+    return True
+
+
+def acquire_single_instance_lock() -> None:
+    """Two copies of this app would mean two OPC UA clients writing the
+    same PLC tags — nondeterministic PLC state. A lock file holding the
+    owning PID (rather than a bare O_CREAT|O_EXCL marker) lets a *new*
+    launch tell a leftover lock from a previous crash apart from a lock a
+    still-running instance actually holds, so a crash doesn't permanently
+    lock users out of the app."""
+    lock_path = paths.user_data_dir() / "compressor_sim.lock"
+    if lock_path.exists():
+        try:
+            owner_pid = int(lock_path.read_text().strip())
+        except (ValueError, OSError):
+            owner_pid = None
+        if owner_pid is not None and owner_pid != os.getpid() and _pid_alive(owner_pid):
+            log.warning("another instance is already running (pid %s), exiting", owner_pid)
+            sys.exit(0)
+        lock_path.unlink(missing_ok=True)  # stale, owner is gone
+    lock_path.write_text(str(os.getpid()))
+    atexit.register(lambda: lock_path.unlink(missing_ok=True))
+
+
+def free_port() -> int:
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        return s.getsockname()[1]
+
+
+class BackendServer:
+    """Runs uvicorn in this process's own thread rather than a subprocess
+    — the app is single-process end to end, so the single-instance lock
+    and window-close handling only ever have one thing to manage."""
+
+    def __init__(self, port: int):
+        import uvicorn
+        from backend.app.server import app
+
+        config = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning", access_log=False)
+        self.server = uvicorn.Server(config)
+
+    def run(self) -> None:
+        self.server.run()
+
+    def stop(self) -> None:
+        self.server.should_exit = True
+
+
+def wait_for_port(port: int, timeout_s: float = 15.0) -> None:
+    """Poll until the socket accepts a connection rather than sleeping a
+    fixed guess — uvicorn startup time varies with disk speed (worse in a
+    PyInstaller onedir build reading from an antivirus-scanned folder)."""
+    deadline = time.monotonic() + timeout_s
+    while time.monotonic() < deadline:
+        try:
+            socket.create_connection(("127.0.0.1", port), timeout=0.2).close()
+            return
+        except OSError:
+            time.sleep(0.1)
+    raise TimeoutError(f"backend did not start listening on port {port} within {timeout_s}s")
+
+
+def fatal_message_box(text: str) -> None:
+    if sys.platform == "win32":
+        ctypes.windll.user32.MessageBoxW(0, text, "Compressor Simulator", 0x10)  # MB_ICONERROR
+    else:
+        print(text, file=sys.stderr)
+
+
+def main() -> None:
+    setup_logging()
+    acquire_single_instance_lock()
+
+    port = free_port()
+    backend = BackendServer(port)
+    threading.Thread(target=backend.run, daemon=True, name="uvicorn").start()
+
+    try:
+        wait_for_port(port)
+    except TimeoutError:
+        log.exception("backend failed to start")
+        fatal_message_box(
+            "Compressor Simulator's backend failed to start.\n"
+            f"See the log at {paths.log_dir() / 'app.log'}"
+        )
+        sys.exit(1)
+
+    try:
+        import webview
+    except Exception:
+        log.exception("pywebview import failed")
+        fatal_message_box(
+            "Compressor Simulator could not start its window.\n"
+            "This usually means the Microsoft Edge WebView2 Runtime is not "
+            "installed. Run the bundled WebView2 installer, then relaunch."
+        )
+        sys.exit(1)
+
+    window = webview.create_window(
+        "Compressor Simulator — Ariel JGH/4",
+        f"http://127.0.0.1:{port}",
+        width=1600,
+        height=980,
+        min_size=(1280, 760),
+        background_color="#1A1D21",
+    )
+    window.events.closing += lambda: (backend.stop(), True)
+
+    try:
+        webview.start(
+            gui="edgechromium",
+            debug=False,
+            private_mode=False,
+            storage_path=str(paths.user_data_dir() / "webview"),
+        )
+    except Exception:
+        log.exception("webview.start failed — WebView2 runtime likely missing")
+        fatal_message_box(
+            "Compressor Simulator could not start its window.\n"
+            "This usually means the Microsoft Edge WebView2 Runtime is not "
+            "installed. Run the bundled WebView2 installer, then relaunch."
+        )
+        sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

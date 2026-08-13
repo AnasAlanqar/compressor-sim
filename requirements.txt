@@ -1,0 +1,8 @@
+# Runtime dependencies — dev backend and the packaged desktop app both use
+# this. Build-only tooling (PyInstaller) is in requirements-build.txt.
+fastapi
+uvicorn[standard]
+asyncua
+numpy
+pyyaml
+pywebview
