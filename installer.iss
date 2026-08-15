@@ -11,7 +11,7 @@
 ; don't hand out admin rights, and this app needs none.
 
 #define MyAppName "Compressor Simulator"
-#define MyAppVersion "0.3.0"
+#define MyAppVersion "0.4.0"
 #define MyAppExeName "CompressorSim.exe"
 #define MyAppPublisher "Anas Alanqar"
 

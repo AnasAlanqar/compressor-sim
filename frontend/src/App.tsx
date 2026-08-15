@@ -185,7 +185,7 @@ export default function App() {
 
       {opcSettingsOpen && (
         <OpcuaSettingsModal
-          disabled={opcConnected}
+          connected={opcConnected}
           onClose={() => setOpcSettingsOpen(false)}
           onSaved={(endpoint) => setOpcEndpoint(endpoint)}
         />

@@ -9,6 +9,7 @@ here may reference physics.py's internal meas() names directly.
 """
 import asyncio
 import logging
+import socket
 import time
 
 import yaml
@@ -443,6 +444,80 @@ async def api_opcua_delete_profile(name: str):
             _opcua_cfg['active_profile'] = None
         _persist_opcua_cfg()
     return {"ok": True}
+
+
+def _local_ipv4_prefixes() -> set:
+    """The "a.b.c" prefixes of every local IPv4 interface, for a /24 scan.
+    Covers both the primary default-route interface (the UDP-connect trick,
+    which sends nothing) and any additional NICs — e.g. a laptop with one
+    interface on the office LAN and a second cabled straight to a PLC."""
+    prefixes = set()
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            s.connect(("8.8.8.8", 80))
+            prefixes.add(s.getsockname()[0].rsplit(".", 1)[0])
+        finally:
+            s.close()
+    except OSError:
+        pass
+    try:
+        for info in socket.getaddrinfo(socket.gethostname(), None, socket.AF_INET):
+            ip = info[4][0]
+            if not ip.startswith("127."):
+                prefixes.add(ip.rsplit(".", 1)[0])
+    except OSError:
+        pass
+    return prefixes
+
+
+async def _probe_port(ip: str, port: int, timeout: float, sem: asyncio.Semaphore):
+    async with sem:
+        try:
+            _, writer = await asyncio.wait_for(asyncio.open_connection(ip, port), timeout=timeout)
+        except (OSError, asyncio.TimeoutError):
+            return None
+        writer.close()
+        try:
+            await writer.wait_closed()
+        except Exception:
+            pass
+        return ip
+
+
+async def _server_name(endpoint: str):
+    """The OPC UA server's own advertised ApplicationName, via a sessionless
+    GetEndpoints (no login, read-only) — so scan results read "OPCUAServer@
+    DESKTOP-KC0FH83" rather than a bare IP."""
+    client = Client(url=endpoint, timeout=3)
+    try:
+        for ep in await client.connect_and_get_server_endpoints():
+            name = getattr(getattr(ep.Server, "ApplicationName", None), "Text", None)
+            if name:
+                return name
+    except Exception:
+        return None
+    return None
+
+
+@app.post("/api/opcua/scan")
+async def api_opcua_scan():
+    """Find OPC UA servers (PLCs) on the local network so a user never has
+    to know a PLC's IP by heart. TCP-probes port 4840 (the OPC UA / CODESYS
+    default) across every local /24, then asks each responder for its name.
+    Returns an empty list — never an error — when nothing answers, so the UI
+    can say "none found" instead of "something broke"."""
+    port = 4840
+    sem = asyncio.Semaphore(200)
+    targets = [f"{prefix}.{host}" for prefix in _local_ipv4_prefixes() for host in range(1, 255)]
+    if not targets:
+        return {"ok": True, "servers": []}
+    hits = [ip for ip in await asyncio.gather(*[_probe_port(ip, port, 0.4, sem) for ip in targets]) if ip]
+    servers = []
+    for ip in sorted(hits, key=lambda x: tuple(int(o) for o in x.split("."))):
+        endpoint = f"opc.tcp://{ip}:{port}"
+        servers.append({"address": ip, "endpoint": endpoint, "name": await _server_name(endpoint)})
+    return {"ok": True, "servers": servers}
 
 
 @app.post("/api/opcua/discover")

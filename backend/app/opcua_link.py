@@ -208,6 +208,24 @@ class OpcuaLink:
         except Exception:
             await client.disconnect()
             raise
+        # Auto-detect each measurement tag's real OPC UA data type from the
+        # server so writes match what the PLC actually declares — a CODESYS
+        # REAL is a 32-bit Float and writing a Double to it raises
+        # BadTypeMismatch — with zero manual configuration. An explicit
+        # tag_types override (config.yaml / Settings) still wins: it's
+        # already in _variant_types from __init__, so this only fills tags
+        # left unspecified. A read that fails just falls back to asyncua's
+        # default value-typing, exactly as before this existed.
+        for tag in WRITE_TAGS:
+            if tag in self._variant_types:
+                continue
+            node = nodes.get(tag)
+            if node is None:
+                continue
+            try:
+                self._variant_types[tag] = await node.read_data_type_as_variant_type()
+            except Exception:
+                pass
         self.client = client
         self._nodes = nodes
         self._server_time_node = client.get_node(SERVER_CURRENT_TIME_NODEID)
