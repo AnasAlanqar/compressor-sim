@@ -195,8 +195,14 @@ class OpcuaLink:
                 await nodes['WD_6001'].read_value()
             else:
                 base = client.get_objects_node()
+                # "{ns}:Name" segments resolve against ns_idx at connect
+                # time, same as node_id_pattern's {ns} — so config.yaml's
+                # shipped default doesn't hardcode a specific server's
+                # namespace *index* (which varies by CODESYS version/which
+                # companion namespaces it registers), only the namespace
+                # *URI*, which is what's actually stable across installs.
                 for part in self._browse_path_prefix:
-                    base = await base.get_child(part)
+                    base = await base.get_child(part.replace("{ns}", str(ns_idx)))
                 for tag in set(READ_TAGS) | set(WRITE_TAGS):
                     nodes[tag] = await base.get_child(f"{ns_idx}:{tag}")
         except Exception:

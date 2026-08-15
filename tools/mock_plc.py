@@ -5,9 +5,12 @@ backend/app/opcua_link.py without real hardware or a CODESYS runtime.
 APP_SPEC.md section 2.1: the app is the OPC UA *client*; something has to
 play the server for opcua_link.py to connect to during development. This
 exposes the full canonical tag set (section 4.1-4.7) plus the section 4.8
-extended tags, under the same namespace URI / browse path config.yaml's
-`opcua:` section already expects — opcua_link.py needs zero code changes
-to talk to it.
+extended tags — but under this tool's own namespace/tree shape (a plain
+"PLC_PRG" object, printed on startup), not config.yaml's shipped default,
+which targets a real CODESYS Control Win V3 server's actual symbol-set
+namespace instead. Either edit config.yaml (or the app's Settings panel)
+to match what this prints on startup, or pass --codesys for the other
+addressing mode config.yaml's node_id_pattern comment documents.
 
 Run alongside the sim, in two terminals from the repo root:
 

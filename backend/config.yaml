@@ -99,15 +99,30 @@ engine:
   oil_run_psig: 60.0     # CAT ADEM engine oil pressure at rated speed
 
 # OPC UA client target — APP_SPEC.md section 2.1: the app is the client,
-# CODESYS's built-in server is the server. browse_path_prefix is the object
-# path (browse names, "nsidx:name") traversed from the Objects node before
-# each tag's own browse name; adjust to match the PLC project's variable
-# tree. namespace_uri identifies the tag variables' own namespace (usually
-# the PLC project's, not the server's default ns0/ns1).
+# CODESYS's built-in server is the server.
+#
+# These defaults are CODESYS Control Win V3's own real, out-of-the-box
+# values for a project that hasn't renamed its Device or Application node
+# (Tools > Symbol Configuration must be enabled and applied once in the
+# CODESYS project for the symbol server to exist at all) — not a made-up
+# placeholder. namespace_uri is literally "urn:symbolset:<Device
+# name>:<Application name>:Symbol Set"; "Device"/"Application" are
+# CODESYS's own default node names, so this matches almost every fresh
+# CODESYS project without editing. The one thing that's genuinely yours to
+# fill in is the last browse_path_prefix segment: GVL_PLC is the name of
+# the Global Variable List *you* declared your tags in — rename it below to
+# match whatever you called it. Use the Settings panel's Discover button
+# (or CODESYS's own project tree) if you're not sure what that is.
+#
+# browse_path_prefix segments may contain "{ns}" — substituted with the
+# namespace index namespace_uri resolves to at connect time, so this
+# doesn't hardcode a specific server's index numbering (which shifts
+# depending on which companion namespaces a given CODESYS version
+# registers) — only the URI, which is what's actually stable.
 opcua:
   endpoint: "opc.tcp://localhost:4840"
-  namespace_uri: "urn:codesys:plc"
-  browse_path_prefix: ["2:PLC_PRG"]
+  namespace_uri: "urn:symbolset:Device:Application:Symbol Set"
+  browse_path_prefix: ["{ns}:Symbol Set", "{ns}:GVL_PLC"]
   watchdog_timeout_s: 2.0
   # Node addressing mode. "browse" (default, matches tools/mock_plc.py's
   # default mode) walks browse_path_prefix then each tag's own browse name

@@ -426,7 +426,7 @@ export default function OpcuaSettingsModal({
             value={form.namespace_uri}
             onChange={(e) => setField('namespace_uri', e.target.value)}
             disabled={disabled}
-            placeholder="urn:codesys:plc"
+            placeholder="urn:symbolset:Device:Application:Symbol Set"
             className="rounded border border-neutral-700 bg-neutral-800 px-2 py-1 disabled:opacity-50"
           />
 
@@ -448,7 +448,7 @@ export default function OpcuaSettingsModal({
                 value={form.browse_path_prefix}
                 onChange={(e) => setField('browse_path_prefix', e.target.value)}
                 disabled={disabled}
-                placeholder="2:PLC_PRG"
+                placeholder="{ns}:Symbol Set, {ns}:GVL_PLC"
                 className="rounded border border-neutral-700 bg-neutral-800 px-2 py-1 disabled:opacity-50"
               />
             </>
