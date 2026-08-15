@@ -174,8 +174,6 @@ export default function OpcuaSettingsModal({
 
   const goToDepth = (depth: number) => runDiscover(discPath.slice(0, depth));
 
-  const useNamespace = (uri: string) => setField('namespace_uri', uri);
-
   const useDiscoveredPath = () => {
     setField('browse_path_prefix', discPath.join(', '));
     // Every browse-tree segment is already namespace-tagged ("5:GVL_PLC") —
@@ -401,23 +399,20 @@ export default function OpcuaSettingsModal({
 
                   <details className="mt-2 text-neutral-600">
                     <summary className="cursor-pointer hover:text-neutral-400">
-                      Raw namespace list ({discNamespaces.length}) — reference only, "Use this path"
-                      above already sets this for you
+                      Raw namespace list ({discNamespaces.length}) — not clickable on purpose. "Use
+                      this path" above is the only supported way to set Namespace URI: several of
+                      these look plausible (mention "CODESYS", your PC name) but aren't where your
+                      tags live, and picking one by hand here is exactly what breaks the connection.
                     </summary>
                     <div className="mt-1 flex flex-wrap gap-1">
                       {discNamespaces.map((ns) => (
-                        <button
+                        <span
                           key={ns.index}
-                          onClick={() => useNamespace(ns.uri)}
-                          title={`click to set Namespace URI to this directly: ${ns.uri}`}
-                          className={`max-w-[220px] truncate rounded border px-1.5 py-0.5 ${
-                            form.namespace_uri === ns.uri
-                              ? 'border-emerald-600 bg-emerald-950/40 text-emerald-300'
-                              : 'border-neutral-700 bg-neutral-800 text-neutral-400 hover:bg-neutral-700'
-                          }`}
+                          title={ns.uri}
+                          className="max-w-[220px] truncate rounded border border-neutral-800 bg-neutral-900 px-1.5 py-0.5 text-neutral-500"
                         >
                           {ns.index}: {ns.uri}
-                        </button>
+                        </span>
                       ))}
                     </div>
                   </details>
