@@ -176,7 +176,17 @@ export default function OpcuaSettingsModal({
 
   const useNamespace = (uri: string) => setField('namespace_uri', uri);
 
-  const useDiscoveredPath = () => setField('browse_path_prefix', discPath.join(', '));
+  const useDiscoveredPath = () => {
+    setField('browse_path_prefix', discPath.join(', '));
+    // Every browse-tree segment is already namespace-tagged ("5:GVL_PLC") —
+    // the namespace a folder lives in is the namespace its tags live in, so
+    // reuse the last segment's index instead of making the user separately
+    // puzzle out which of the (often 5+) advertised namespaces is "theirs".
+    const last = discPath[discPath.length - 1];
+    const lastIndex = last ? Number(last.split(':')[0]) : NaN;
+    const ns = discNamespaces.find((n) => n.index === lastIndex);
+    if (ns) setField('namespace_uri', ns.uri);
+  };
 
   const handleSave = async () => {
     setBusy(true);
@@ -337,27 +347,12 @@ export default function OpcuaSettingsModal({
               {discError && <div className="text-red-400">{discError}</div>}
               {!discBusy && !discError && (
                 <>
-                  <div className="mb-2">
-                    <div className="mb-1 text-neutral-500">
-                      Namespaces on this server — click the one that's your CODESYS project (not the
-                      generic OPC Foundation one) to fill in Namespace URI:
-                    </div>
-                    <div className="flex flex-wrap gap-1">
-                      {discNamespaces.map((ns) => (
-                        <button
-                          key={ns.index}
-                          onClick={() => useNamespace(ns.uri)}
-                          title={ns.uri}
-                          className={`max-w-[220px] truncate rounded border px-1.5 py-0.5 ${
-                            form.namespace_uri === ns.uri
-                              ? 'border-emerald-600 bg-emerald-950/40 text-emerald-300'
-                              : 'border-neutral-700 bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
-                          }`}
-                        >
-                          {ns.index}: {ns.uri}
-                        </button>
-                      ))}
-                    </div>
+                  <div className="mb-2 text-neutral-500">
+                    Click into folders below until you reach your tags — usually a global variable
+                    list like <span className="text-neutral-300">GVL_PLC</span>. Then click{' '}
+                    <span className="text-neutral-300">"Use this path"</span>: it fills in both
+                    Browse path and Namespace URI for you, so you don't need to figure out which
+                    namespace below is the right one.
                   </div>
 
                   <div className="mb-1 flex items-center justify-between">
@@ -379,7 +374,7 @@ export default function OpcuaSettingsModal({
                         onClick={useDiscoveredPath}
                         className="rounded border border-emerald-700 bg-emerald-950/40 px-1.5 py-0.5 text-emerald-300 hover:bg-emerald-950/70"
                       >
-                        Use this path as Browse path
+                        Use this path
                       </button>
                     )}
                   </div>
@@ -403,6 +398,29 @@ export default function OpcuaSettingsModal({
                       </button>
                     ))}
                   </div>
+
+                  <details className="mt-2 text-neutral-600">
+                    <summary className="cursor-pointer hover:text-neutral-400">
+                      Raw namespace list ({discNamespaces.length}) — reference only, "Use this path"
+                      above already sets this for you
+                    </summary>
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {discNamespaces.map((ns) => (
+                        <button
+                          key={ns.index}
+                          onClick={() => useNamespace(ns.uri)}
+                          title={`click to set Namespace URI to this directly: ${ns.uri}`}
+                          className={`max-w-[220px] truncate rounded border px-1.5 py-0.5 ${
+                            form.namespace_uri === ns.uri
+                              ? 'border-emerald-600 bg-emerald-950/40 text-emerald-300'
+                              : 'border-neutral-700 bg-neutral-800 text-neutral-400 hover:bg-neutral-700'
+                          }`}
+                        >
+                          {ns.index}: {ns.uri}
+                        </button>
+                      ))}
+                    </div>
+                  </details>
                 </>
               )}
             </div>
