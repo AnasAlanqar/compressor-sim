@@ -11,7 +11,7 @@
 ; don't hand out admin rights, and this app needs none.
 
 #define MyAppName "Compressor Simulator"
-#define MyAppVersion "0.1.0"
+#define MyAppVersion "0.2.2"
 #define MyAppExeName "CompressorSim.exe"
 #define MyAppPublisher "Anas Alanqar"
 
@@ -30,7 +30,7 @@ OutputBaseFilename=CompressorSim-Setup-{#MyAppVersion}
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
-; SetupIconFile=assets\icon.ico   ; uncomment once assets\icon.ico exists
+SetupIconFile=assets\icon.ico
 UninstallDisplayIcon={app}\{#MyAppExeName}
 ArchitecturesInstallIn64BitMode=x64compatible
 

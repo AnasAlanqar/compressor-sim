@@ -20,6 +20,25 @@ interface ConfigResponse {
   active_profile: string | null;
 }
 
+interface DiscoverNamespace {
+  index: number;
+  uri: string;
+}
+
+interface DiscoverChild {
+  browse_name: string;
+  display_name: string;
+  is_variable: boolean;
+}
+
+interface DiscoverResponse {
+  ok: boolean;
+  error?: string;
+  namespaces?: DiscoverNamespace[];
+  path?: string[];
+  children?: DiscoverChild[];
+}
+
 const EMPTY: OpcuaConfig = {
   endpoint: '',
   namespace_uri: '',
@@ -87,6 +106,17 @@ export default function OpcuaSettingsModal({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // "Discover" — a read-only tree browser (/api/opcua/discover) for a new
+  // user who doesn't know their PLC's namespace URI or browse path yet.
+  // Uses its own throwaway connection server-side, so it's safe to run
+  // regardless of whether the app is already connected to something else.
+  const [discOpen, setDiscOpen] = useState(false);
+  const [discBusy, setDiscBusy] = useState(false);
+  const [discError, setDiscError] = useState<string | null>(null);
+  const [discNamespaces, setDiscNamespaces] = useState<DiscoverNamespace[]>([]);
+  const [discPath, setDiscPath] = useState<string[]>([]);
+  const [discChildren, setDiscChildren] = useState<DiscoverChild[]>([]);
+
   const load = () => {
     fetch('/api/opcua/config')
       .then((r) => r.json())
@@ -102,6 +132,51 @@ export default function OpcuaSettingsModal({
 
   const setField = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((f) => ({ ...f, [key]: value }));
+
+  const runDiscover = async (path: string[]) => {
+    const endpoint = form.endpoint.trim();
+    if (!endpoint) {
+      setDiscError('enter an endpoint above first');
+      return;
+    }
+    setDiscBusy(true);
+    setDiscError(null);
+    try {
+      const r = await fetch('/api/opcua/discover', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ endpoint, path }),
+      });
+      const data: DiscoverResponse = await r.json();
+      if (!data.ok) {
+        setDiscError(data.error ?? 'discover failed');
+        return;
+      }
+      setDiscNamespaces(data.namespaces ?? []);
+      setDiscPath(data.path ?? path);
+      setDiscChildren(data.children ?? []);
+    } catch {
+      setDiscError('discover failed — is the endpoint reachable?');
+    } finally {
+      setDiscBusy(false);
+    }
+  };
+
+  const openDiscover = () => {
+    setDiscOpen(true);
+    runDiscover([]);
+  };
+
+  const descendInto = (child: DiscoverChild) => {
+    if (child.is_variable || discBusy) return;
+    runDiscover([...discPath, child.browse_name]);
+  };
+
+  const goToDepth = (depth: number) => runDiscover(discPath.slice(0, depth));
+
+  const useNamespace = (uri: string) => setField('namespace_uri', uri);
+
+  const useDiscoveredPath = () => setField('browse_path_prefix', discPath.join(', '));
 
   const handleSave = async () => {
     setBusy(true);
@@ -238,13 +313,100 @@ export default function OpcuaSettingsModal({
 
         <div className="grid grid-cols-[120px_1fr] items-center gap-2">
           <label className="text-neutral-400">Endpoint</label>
-          <input
-            value={form.endpoint}
-            onChange={(e) => setField('endpoint', e.target.value)}
-            disabled={disabled}
-            placeholder="opc.tcp://host:4840"
-            className="rounded border border-neutral-700 bg-neutral-800 px-2 py-1 disabled:opacity-50"
-          />
+          <div className="flex gap-1.5">
+            <input
+              value={form.endpoint}
+              onChange={(e) => setField('endpoint', e.target.value)}
+              disabled={disabled}
+              placeholder="opc.tcp://host:4840"
+              className="flex-1 rounded border border-neutral-700 bg-neutral-800 px-2 py-1 disabled:opacity-50"
+            />
+            <button
+              onClick={() => (discOpen ? setDiscOpen(false) : openDiscover())}
+              disabled={disabled || !form.endpoint.trim()}
+              title="Browse this server to find its namespace URI and tag path — for a PLC you haven't connected to before"
+              className="whitespace-nowrap rounded border border-neutral-700 bg-neutral-800 px-2 py-1 text-xs hover:bg-neutral-700 disabled:opacity-50"
+            >
+              {discOpen ? 'Hide' : 'Discover'}
+            </button>
+          </div>
+
+          {discOpen && (
+            <div className="col-span-2 rounded border border-neutral-700 bg-neutral-950 p-2 text-xs">
+              {discBusy && <div className="text-neutral-500">browsing…</div>}
+              {discError && <div className="text-red-400">{discError}</div>}
+              {!discBusy && !discError && (
+                <>
+                  <div className="mb-2">
+                    <div className="mb-1 text-neutral-500">
+                      Namespaces on this server — click the one that's your CODESYS project (not the
+                      generic OPC Foundation one) to fill in Namespace URI:
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {discNamespaces.map((ns) => (
+                        <button
+                          key={ns.index}
+                          onClick={() => useNamespace(ns.uri)}
+                          title={ns.uri}
+                          className={`max-w-[220px] truncate rounded border px-1.5 py-0.5 ${
+                            form.namespace_uri === ns.uri
+                              ? 'border-emerald-600 bg-emerald-950/40 text-emerald-300'
+                              : 'border-neutral-700 bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
+                          }`}
+                        >
+                          {ns.index}: {ns.uri}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="mb-1 flex items-center justify-between">
+                    <div className="flex flex-wrap items-center gap-1 text-neutral-500">
+                      <button onClick={() => goToDepth(0)} className="hover:text-neutral-200">
+                        Objects
+                      </button>
+                      {discPath.map((seg, i) => (
+                        <span key={i} className="flex items-center gap-1">
+                          <span>/</span>
+                          <button onClick={() => goToDepth(i + 1)} className="hover:text-neutral-200">
+                            {seg}
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                    {discPath.length > 0 && (
+                      <button
+                        onClick={useDiscoveredPath}
+                        className="rounded border border-emerald-700 bg-emerald-950/40 px-1.5 py-0.5 text-emerald-300 hover:bg-emerald-950/70"
+                      >
+                        Use this path as Browse path
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="max-h-40 overflow-y-auto rounded border border-neutral-800">
+                    {discChildren.length === 0 && (
+                      <div className="px-2 py-1 text-neutral-600">no children here</div>
+                    )}
+                    {discChildren.map((child) => (
+                      <button
+                        key={child.browse_name}
+                        onClick={() => descendInto(child)}
+                        disabled={child.is_variable}
+                        className="flex w-full items-center justify-between border-b border-neutral-900 px-2 py-1 text-left last:border-0 hover:bg-neutral-800 disabled:hover:bg-transparent"
+                      >
+                        <span className={child.is_variable ? 'text-neutral-500' : 'text-neutral-200'}>
+                          {child.is_variable ? '' : '▸ '}
+                          {child.display_name}
+                        </span>
+                        {child.is_variable && <span className="text-neutral-600">tag</span>}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
 
           <label className="text-neutral-400">Namespace URI</label>
           <input

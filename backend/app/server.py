@@ -12,6 +12,7 @@ import logging
 import time
 
 import yaml
+from asyncua import Client
 from fastapi import Body, FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
@@ -442,6 +443,46 @@ async def api_opcua_delete_profile(name: str):
             _opcua_cfg['active_profile'] = None
         _persist_opcua_cfg()
     return {"ok": True}
+
+
+@app.post("/api/opcua/discover")
+async def api_opcua_discover(body: dict = Body(...)):
+    """Read-only tree browser for the Settings panel's "Discover" button —
+    the answer to "what do I even type in these fields" for a real PLC a
+    new user has never connected to before. Opens its own throwaway
+    client (never touches state.opcua/the active link) so it's safe to use
+    whether or not the app is currently connected to something else.
+    body: {endpoint, path?: list[str]} — path is the browse_path_prefix
+    built so far (empty/omitted = the Objects node's direct children)."""
+    endpoint = (body.get('endpoint') or '').strip()
+    path = body.get('path') or []
+    if not endpoint:
+        return {"ok": False, "error": "endpoint required"}
+    client = Client(url=endpoint, timeout=5)
+    try:
+        await client.connect()
+    except Exception as exc:
+        return {"ok": False, "error": f"connect failed: {exc}"}
+    try:
+        namespaces = [{"index": i, "uri": uri} for i, uri in enumerate(await client.get_namespace_array())]
+        node = client.get_objects_node()
+        for part in path:
+            node = await node.get_child(part)
+        children = []
+        for child in await node.get_children():
+            bname = await child.read_browse_name()
+            is_variable = (await child.read_node_class()).name == 'Variable'
+            children.append({
+                "browse_name": f"{bname.NamespaceIndex}:{bname.Name}",
+                "display_name": bname.Name,
+                "is_variable": is_variable,
+            })
+        children.sort(key=lambda c: (c["is_variable"], c["display_name"]))
+        return {"ok": True, "namespaces": namespaces, "path": path, "children": children}
+    except Exception as exc:
+        return {"ok": False, "error": f"browse failed: {exc}"}
+    finally:
+        await client.disconnect()
 
 
 @app.post("/api/opcua/connect")
