@@ -12,7 +12,7 @@ import logging
 import time
 
 import yaml
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import Body, FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -310,6 +310,13 @@ async def api_reset(mode: str = "blown_down"):
 _alarms = tg.load_alarms(ph.DEFAULT_CONFIG)
 with open(ph.DEFAULT_CONFIG) as _f:
     _opcua_cfg = yaml.safe_load(_f).get("opcua", {})
+# Settings-panel edits (endpoint/namespace/profiles) layer on top of the
+# documented config.yaml default from a separate file (paths.py's
+# opcua_overrides_path docstring) rather than rewriting config.yaml itself.
+_opcua_overrides_path = paths.opcua_overrides_path()
+if _opcua_overrides_path.exists():
+    with open(_opcua_overrides_path) as _f:
+        _opcua_cfg.update(yaml.safe_load(_f) or {})
 
 
 @app.get("/api/config")
@@ -321,11 +328,130 @@ async def api_config():
     return {"alarms": _alarms, "opcua_default_endpoint": _opcua_cfg.get("endpoint")}
 
 
+# Fields that make up one OPC UA connection target — shared shape between
+# the top-level opcua.* config and each entry under opcua.profiles.
+_OPCUA_FIELDS = ('endpoint', 'namespace_uri', 'browse_path_prefix', 'watchdog_timeout_s',
+                  'node_addressing', 'node_id_pattern', 'tag_types')
+
+
+def _opcua_public(cfg: dict) -> dict:
+    out = {k: cfg.get(k) for k in _OPCUA_FIELDS}
+    # Derived, not stored — true iff tag_types currently matches
+    # opcua_link.CODESYS_TAG_TYPES exactly, i.e. the "CODESYS REAL tags"
+    # toggle (below) is effectively on, so the Settings panel can reflect
+    # it as a checkbox instead of asking someone to read a tag_types dict.
+    tag_types = out.get('tag_types') or {}
+    out['codesys_real_tags'] = all(
+        tag_types.get(tag) == vt for tag, vt in opcua_link.CODESYS_TAG_TYPES.items())
+    return out
+
+
+def _resolve_tag_types(body: dict) -> dict | None:
+    """Body's "codesys_real_tags" checkbox, expanded to the full tag_types
+    override a real CODESYS target needs (opcua_link.CODESYS_TAG_TYPES —
+    32-bit REAL for analog tags, 16-bit INT for WD_6001) or cleared back to
+    this app's implicit Double/Int64 defaults. None means the field wasn't
+    in the body at all — caller should leave tag_types as is."""
+    if 'codesys_real_tags' not in body:
+        return None
+    if body['codesys_real_tags']:
+        return dict(opcua_link.CODESYS_TAG_TYPES)
+    return {}
+
+
+def _persist_opcua_cfg() -> None:
+    """Writes the in-memory OPC UA config (current fields + profiles) to
+    the dedicated overrides file (paths.opcua_overrides_path()) so edits
+    made from the Settings panel survive an app restart — the "configure
+    once per laptop/PLC, not every launch" ask behind connection profiles
+    — without ever rewriting (and stripping the comments from) the
+    documented config.yaml."""
+    with open(_opcua_overrides_path, 'w') as f:
+        yaml.safe_dump(_opcua_cfg, f, sort_keys=False)
+
+
+@app.get("/api/opcua/config")
+async def api_opcua_config():
+    """Full connection config for the Settings panel — not just the
+    endpoint the header shows, but namespace/browse-path/addressing-mode
+    too, plus any saved profiles, so a user can point the app at a real
+    PLC, a different laptop, or a local CODESYS instance without
+    hand-editing config.yaml (docs/DESKTOP_APP.md)."""
+    return {
+        "current": _opcua_public(_opcua_cfg),
+        "profiles": {name: _opcua_public(p) for name, p in _opcua_cfg.get("profiles", {}).items()},
+        "active_profile": _opcua_cfg.get("active_profile"),
+    }
+
+
+@app.put("/api/opcua/config")
+async def api_opcua_update_config(body: dict = Body(...)):
+    """Edits the active connection target in place (as opposed to a saved
+    profile) and persists it. Hand-editing any field marks the config as no
+    longer "being" a saved profile, since it may now differ from it."""
+    for k in _OPCUA_FIELDS:
+        if k in body:
+            _opcua_cfg[k] = body[k]
+    tag_types = _resolve_tag_types(body)
+    if tag_types is not None:
+        _opcua_cfg['tag_types'] = tag_types
+    _opcua_cfg['active_profile'] = None
+    _persist_opcua_cfg()
+    return _opcua_public(_opcua_cfg)
+
+
+@app.post("/api/opcua/profiles/{name}")
+async def api_opcua_save_profile(name: str, body: dict = Body(default={})):
+    """Saves body — or, if no body fields are given, the current active
+    config — as a named profile, e.g. "Bench PLC" / "Site 1 Panel" /
+    "CODESYS local", so switching targets later is a dropdown pick."""
+    name = name.strip()
+    if not name:
+        return {"ok": False, "error": "profile name required"}
+    profile = {k: body[k] for k in _OPCUA_FIELDS if k in body} or {k: _opcua_cfg.get(k) for k in _OPCUA_FIELDS}
+    tag_types = _resolve_tag_types(body)
+    if tag_types is not None:
+        profile['tag_types'] = tag_types
+    _opcua_cfg.setdefault('profiles', {})[name] = profile
+    _persist_opcua_cfg()
+    return {"ok": True, "name": name, "profile": _opcua_public(profile)}
+
+
+@app.post("/api/opcua/profiles/{name}/activate")
+async def api_opcua_activate_profile(name: str):
+    """Loads a saved profile's fields into the active config and persists
+    them as the new default — the one-click "switch to a different PLC or
+    laptop" action, in place of re-typing an endpoint/namespace by hand."""
+    profiles = _opcua_cfg.get('profiles', {})
+    if name not in profiles:
+        return {"ok": False, "error": f"no such profile: {name}"}
+    for k in _OPCUA_FIELDS:
+        if k in profiles[name]:
+            _opcua_cfg[k] = profiles[name][k]
+    _opcua_cfg['active_profile'] = name
+    _persist_opcua_cfg()
+    return {"ok": True, "current": _opcua_public(_opcua_cfg)}
+
+
+@app.delete("/api/opcua/profiles/{name}")
+async def api_opcua_delete_profile(name: str):
+    profiles = _opcua_cfg.get('profiles', {})
+    if name in profiles:
+        del profiles[name]
+        if _opcua_cfg.get('active_profile') == name:
+            _opcua_cfg['active_profile'] = None
+        _persist_opcua_cfg()
+    return {"ok": True}
+
+
 @app.post("/api/opcua/connect")
-async def api_opcua_connect(endpoint: str | None = None):
+async def api_opcua_connect():
     """One-shot REST action (section 5's transport note reserves REST for
     reset/config-reload-style one-shots; connect/disconnect is the same
-    kind of action, not a fault or boundary edit)."""
+    kind of action, not a fault or boundary edit). Always connects using
+    the active config (top-level opcua.* fields) — set it via the Settings
+    panel (/api/opcua/config, /api/opcua/profiles) before calling this,
+    rather than passing an ad hoc endpoint here."""
     if state.opcua is not None and state.opcua.status()["connected"]:
         return {"ok": False, "error": "already connected", **state.opcua.status()}
     if state.opcua is not None:
@@ -337,7 +463,7 @@ async def api_opcua_connect(endpoint: str | None = None):
         await state.opcua.disconnect()
     link = opcua_link.OpcuaLink(
         state,
-        endpoint=endpoint or _opcua_cfg.get("endpoint", "opc.tcp://localhost:4840"),
+        endpoint=_opcua_cfg.get("endpoint", "opc.tcp://localhost:4840"),
         namespace_uri=_opcua_cfg.get("namespace_uri", ""),
         browse_path_prefix=_opcua_cfg.get("browse_path_prefix", []),
         watchdog_timeout_s=_opcua_cfg.get("watchdog_timeout_s", 2.0),

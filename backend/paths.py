@@ -51,6 +51,16 @@ def config_path() -> Path:
     return dest
 
 
+def opcua_overrides_path() -> Path:
+    """Writable file holding OPC UA connection edits made from the app's
+    Settings panel (endpoint/namespace/profiles). Kept separate from
+    config.yaml itself, rather than rewriting that file in place, so
+    saving a connection profile can never touch — or strip the comments
+    of — the documented physics config, in dev or a frozen build alike.
+    Absent until the first save."""
+    return user_data_dir() / "opcua_overrides.yaml"
+
+
 def frontend_dist_path() -> Path:
     """Built frontend assets (`npm run build` output). Frozen: bundled
     under MEIPASS/frontend_dist. Dev: frontend/dist, present only after a

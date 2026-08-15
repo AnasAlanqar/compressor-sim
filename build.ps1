@@ -1,7 +1,7 @@
-# Builds the Windows desktop app end to end: frontend -> PyInstaller onedir
+﻿# Builds the Windows desktop app end to end: frontend -> PyInstaller onedir
 # bundle -> single-file installer (installer.iss). Run from the repo root,
 # in a venv with requirements-build.txt installed, with Inno Setup's `iscc`
-# on PATH (https://jrsoftware.org/isinfo.php, free — or `choco install
+# on PATH (https://jrsoftware.org/isinfo.php, free - or `choco install
 # innosetup`).
 #
 #   python -m venv .venv
@@ -9,10 +9,10 @@
 #   pip install -r requirements-build.txt
 #   .\build.ps1
 #
-# Output for you (this script): dist\CompressorSim\CompressorSim.exe — the
+# Output for you (this script): dist\CompressorSim\CompressorSim.exe - the
 # raw onedir bundle, useful for a quick test run without installing anything.
 # Output for everyone else: installer_output\CompressorSim-Setup-<version>.exe
-# — the one file to hand out. Double-click, Next, Next, Finish, desktop icon,
+# - the one file to hand out. Double-click, Next, Next, Finish, desktop icon,
 # launch. No Python, no Node, no terminal, no admin rights required.
 
 $ErrorActionPreference = "Stop"
@@ -47,7 +47,7 @@ Write-Host "==> built: $exe" -ForegroundColor Green
 
 $iscc = Get-Command iscc.exe -ErrorAction SilentlyContinue
 if (-not $iscc) {
-    Write-Host "==> iscc not found on PATH — skipping installer." -ForegroundColor Yellow
+    Write-Host "==> iscc not found on PATH - skipping installer." -ForegroundColor Yellow
     Write-Host "    Install Inno Setup (https://jrsoftware.org/isinfo.php) to build" -ForegroundColor Yellow
     Write-Host "    CompressorSim-Setup.exe, the single file to hand out to other users." -ForegroundColor Yellow
     exit 0

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSimState } from './hooks/useSimState';
 import FaultPanel from './components/FaultPanel';
 import ManualOverridePanel from './components/ManualOverridePanel';
+import OpcuaSettingsModal from './components/OpcuaSettingsModal';
 import PidDiagram from './components/PidDiagram';
 import Tabs from './components/Tabs';
 import TagTable from './components/TagTable';
@@ -42,6 +43,7 @@ export default function App() {
   const [alarms, setAlarms] = useState<AlarmTable>({});
   const [opcEndpoint, setOpcEndpoint] = useState('');
   const [opcBusy, setOpcBusy] = useState(false);
+  const [opcSettingsOpen, setOpcSettingsOpen] = useState(false);
 
   useEffect(() => {
     fetch('/api/config')
@@ -60,7 +62,7 @@ export default function App() {
   const doOpcConnect = async () => {
     setOpcBusy(true);
     try {
-      await fetch(`/api/opcua/connect?endpoint=${encodeURIComponent(opcEndpoint)}`, { method: 'POST' });
+      await fetch('/api/opcua/connect', { method: 'POST' });
     } finally {
       setOpcBusy(false);
     }
@@ -111,14 +113,16 @@ export default function App() {
         </div>
         <div className="flex items-center gap-2 text-sm">
           <span className={`h-2 w-2 rounded-full ${opcConnected ? 'bg-emerald-500' : 'bg-neutral-600'}`} />
-          <input
-            type="text"
-            value={opcEndpoint}
-            onChange={(e) => setOpcEndpoint(e.target.value)}
-            disabled={opcConnected}
-            placeholder="opc.tcp://host:4840"
-            className="w-56 rounded border border-neutral-700 bg-neutral-800 px-2 py-1 text-xs disabled:opacity-50"
-          />
+          <span className="max-w-[16rem] truncate text-xs text-neutral-400" title={opcEndpoint}>
+            {opcEndpoint || 'no endpoint configured'}
+          </span>
+          <button
+            onClick={() => setOpcSettingsOpen(true)}
+            title="OPC UA connection settings"
+            className="rounded border border-neutral-700 bg-neutral-800 px-2 py-1 text-xs hover:bg-neutral-700"
+          >
+            ⚙
+          </button>
           {opcConnected ? (
             <button
               onClick={doOpcDisconnect}
@@ -178,6 +182,14 @@ export default function App() {
         <Readout label="Speed" value={num('ST_1008').toFixed(0)} unit="rpm" />
         <Readout label="Flow" value={flows.m_comp.toFixed(2)} unit="kg/s" />
       </footer>
+
+      {opcSettingsOpen && (
+        <OpcuaSettingsModal
+          disabled={opcConnected}
+          onClose={() => setOpcSettingsOpen(false)}
+          onSaved={(endpoint) => setOpcEndpoint(endpoint)}
+        />
+      )}
     </div>
   );
 }

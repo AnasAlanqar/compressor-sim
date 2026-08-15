@@ -107,6 +107,23 @@ WRITE_TAGS = (
     + ['PSL_7031']
 )
 
+# The WRITE_TAGS subset that's a plain float (psig/degF/rpm/%) rather than
+# boolean or the WD_6001 int counter — i.e. the tags that need config.yaml's
+# opcua.tag_types: Float override on a real CODESYS target, whose REAL type
+# is 32-bit (this app's implicit default is Double) and rejects a Double
+# write with BadTypeMismatch. Mirrors tools/mock_plc.py's own _BOOL_TAGS/
+# _INT_TAGS split, kept here so the Settings panel's "CODESYS REAL tags"
+# convenience toggle (server.py) doesn't need its own copy of this list.
+FLOAT_WRITE_TAGS = set(tg._AI_MAP) | {'TT_2014', 'PT_1007'}
+
+# Same story as FLOAT_WRITE_TAGS but for WD_6001 (section 4.7's heartbeat):
+# CODESYS's plain INT is 16-bit — this app's implicit default is Int64 —
+# and heartbeat() (tags.py) already rolls the counter at 32768 specifically
+# to fit a signed Int16, so Int16 (not UInt16) is the correct override.
+# Found live against a real CODESYS Symbol Set export: FLOAT_WRITE_TAGS
+# alone silently left WD_6001 mismatched since it's neither float nor bool.
+CODESYS_TAG_TYPES = {tag: 'Float' for tag in FLOAT_WRITE_TAGS} | {'WD_6001': 'Int16'}
+
 
 class OpcuaLink:
     """One instance per connection attempt, owned by server.py's SimState.

@@ -24,6 +24,15 @@ from backend import paths
 
 log = logging.getLogger("compressor_sim.desktop")
 
+# console=False (compressor_sim.spec) means there is no terminal, so
+# sys.stdout/sys.stderr are None in the frozen build. Anything that writes
+# to them unguarded (uvicorn's default logging config, a stray print) would
+# crash with AttributeError: 'NoneType' object has no attribute 'write'.
+if sys.stdout is None:
+    sys.stdout = open(os.devnull, "w")
+if sys.stderr is None:
+    sys.stderr = open(os.devnull, "w")
+
 
 def setup_logging() -> None:
     """console=False in the frozen build means there is no terminal to see
@@ -88,7 +97,14 @@ class BackendServer:
         import uvicorn
         from backend.app.server import app
 
-        config = uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning", access_log=False)
+        config = uvicorn.Config(
+            app,
+            host="127.0.0.1",
+            port=port,
+            log_level="warning",
+            access_log=False,
+            log_config=None,  # don't let uvicorn install its own stderr handler — setup_logging() already did
+        )
         self.server = uvicorn.Server(config)
 
     def run(self) -> None:
