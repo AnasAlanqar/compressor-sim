@@ -318,7 +318,16 @@ with open(ph.DEFAULT_CONFIG) as _f:
 _opcua_overrides_path = paths.opcua_overrides_path()
 if _opcua_overrides_path.exists():
     with open(_opcua_overrides_path) as _f:
-        _opcua_cfg.update(yaml.safe_load(_f) or {})
+        _ov = yaml.safe_load(_f) or {}
+    # Auto-heal overrides saved by pre-0.4 builds: "urn:codesys:plc" was a
+    # placeholder namespace that never matched a real CODESYS server, and
+    # any browse_path/addressing saved alongside it is equally suspect. Drop
+    # those fields so the current defaults (node_addressing: auto, which
+    # needs neither) take over instead of a config that never worked.
+    if _ov.get("namespace_uri") == "urn:codesys:plc":
+        for _k in ("namespace_uri", "browse_path_prefix", "node_addressing", "node_id_pattern"):
+            _ov.pop(_k, None)
+    _opcua_cfg.update(_ov)
 
 
 @app.get("/api/config")
@@ -583,7 +592,7 @@ async def api_opcua_connect():
         namespace_uri=_opcua_cfg.get("namespace_uri", ""),
         browse_path_prefix=_opcua_cfg.get("browse_path_prefix", []),
         watchdog_timeout_s=_opcua_cfg.get("watchdog_timeout_s", 2.0),
-        node_addressing=_opcua_cfg.get("node_addressing", "browse"),
+        node_addressing=_opcua_cfg.get("node_addressing", "auto"),
         node_id_pattern=_opcua_cfg.get("node_id_pattern"),
         tag_types=_opcua_cfg.get("tag_types"),
     )

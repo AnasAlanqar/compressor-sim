@@ -5,7 +5,7 @@ interface OpcuaConfig {
   namespace_uri: string;
   browse_path_prefix: string[];
   watchdog_timeout_s: number;
-  node_addressing: 'browse' | 'node_id';
+  node_addressing: 'auto' | 'browse' | 'node_id';
   node_id_pattern: string | null;
 }
 
@@ -74,7 +74,7 @@ export default function OpcuaSettingsModal({
   // most users never open this.
   const [namespaceUri, setNamespaceUri] = useState('');
   const [browsePath, setBrowsePath] = useState('');
-  const [addressing, setAddressing] = useState<'browse' | 'node_id'>('browse');
+  const [addressing, setAddressing] = useState<'auto' | 'browse' | 'node_id'>('auto');
   const [nodeIdPattern, setNodeIdPattern] = useState('');
   const [watchdog, setWatchdog] = useState('2');
 
@@ -108,7 +108,7 @@ export default function OpcuaSettingsModal({
         setAddress(addr);
         setNamespaceUri(cur.namespace_uri ?? '');
         setBrowsePath((cur.browse_path_prefix ?? []).join(', '));
-        setAddressing(cur.node_addressing ?? 'browse');
+        setAddressing(cur.node_addressing ?? 'auto');
         setNodeIdPattern(cur.node_id_pattern ?? '');
         setWatchdog(String(cur.watchdog_timeout_s ?? 2));
         setProfiles(c.profiles ?? {});
@@ -222,7 +222,7 @@ export default function OpcuaSettingsModal({
       setAddress(addr);
       setNamespaceUri(cur.namespace_uri ?? '');
       setBrowsePath((cur.browse_path_prefix ?? []).join(', '));
-      setAddressing(cur.node_addressing ?? 'browse');
+      setAddressing(cur.node_addressing ?? 'auto');
       setNodeIdPattern(cur.node_id_pattern ?? '');
       setWatchdog(String(cur.watchdog_timeout_s ?? 2));
       setActiveProfile(name);
@@ -513,11 +513,32 @@ export default function OpcuaSettingsModal({
             }}
             className="cursor-pointer text-xs text-neutral-500 hover:text-neutral-300"
           >
-            {advancedOpen ? '▾' : '▸'} Advanced — tag tree location (only if your CODESYS project
-            renamed things)
+            {advancedOpen ? '▾' : '▸'} Advanced — how tags are found (default: automatic, nothing to
+            set)
           </summary>
 
           <div className="mt-3 grid grid-cols-[120px_1fr] items-center gap-2">
+            <label className="text-neutral-400">Find tags by</label>
+            <select
+              value={addressing}
+              onChange={(e) => setAddressing(e.target.value as 'auto' | 'browse' | 'node_id')}
+              disabled={locked}
+              className={field}
+            >
+              <option value="auto">Automatic — search the PLC (recommended)</option>
+              <option value="browse">Browse path (namespace + tag list)</option>
+              <option value="node_id">Node ID pattern</option>
+            </select>
+
+            {addressing === 'auto' && (
+              <div className="col-span-2 text-xs text-neutral-600">
+                The app finds its tags by name anywhere on the PLC — nothing to set here. Only switch
+                modes if the PLC exposes its tags somewhere Automatic can't reach.
+              </div>
+            )}
+
+            {addressing === 'browse' && (
+              <>
             <label className="text-neutral-400">Tag list name</label>
             <input
               value={browsePath}
@@ -601,28 +622,27 @@ export default function OpcuaSettingsModal({
               </div>
             )}
 
-            <label className="text-neutral-400">Namespace URI</label>
-            <input
-              value={namespaceUri}
-              onChange={(e) => setNamespaceUri(e.target.value)}
-              disabled={locked}
-              placeholder="urn:symbolset:Device:Application:Symbol Set"
-              className={field}
-            />
-
-            <label className="text-neutral-400">Addressing</label>
-            <select
-              value={addressing}
-              onChange={(e) => setAddressing(e.target.value as 'browse' | 'node_id')}
-              disabled={locked}
-              className={field}
-            >
-              <option value="browse">Browse tree (normal)</option>
-              <option value="node_id">Node ID pattern</option>
-            </select>
+                <label className="text-neutral-400">Namespace URI</label>
+                <input
+                  value={namespaceUri}
+                  onChange={(e) => setNamespaceUri(e.target.value)}
+                  disabled={locked}
+                  placeholder="urn:symbolset:Device:Application:Symbol Set"
+                  className={field}
+                />
+              </>
+            )}
 
             {addressing === 'node_id' && (
               <>
+                <label className="text-neutral-400">Namespace URI</label>
+                <input
+                  value={namespaceUri}
+                  onChange={(e) => setNamespaceUri(e.target.value)}
+                  disabled={locked}
+                  placeholder="urn:symbolset:Device:Application:Symbol Set"
+                  className={field}
+                />
                 <label className="text-neutral-400">Node ID pattern</label>
                 <input
                   value={nodeIdPattern}

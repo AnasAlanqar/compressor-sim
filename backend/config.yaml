@@ -101,36 +101,25 @@ engine:
 # OPC UA client target — APP_SPEC.md section 2.1: the app is the client,
 # CODESYS's built-in server is the server.
 #
-# These defaults are CODESYS Control Win V3's own real, out-of-the-box
-# values for a project that hasn't renamed its Device or Application node
-# (Tools > Symbol Configuration must be enabled and applied once in the
-# CODESYS project for the symbol server to exist at all) — not a made-up
-# placeholder. namespace_uri is literally "urn:symbolset:<Device
-# name>:<Application name>:Symbol Set"; "Device"/"Application" are
-# CODESYS's own default node names, so this matches almost every fresh
-# CODESYS project without editing. The one thing that's genuinely yours to
-# fill in is the last browse_path_prefix segment: GVL_PLC is the name of
-# the Global Variable List *you* declared your tags in — rename it below to
-# match whatever you called it. Use the Settings panel's Discover button
-# (or CODESYS's own project tree) if you're not sure what that is.
-#
-# browse_path_prefix segments may contain "{ns}" — substituted with the
-# namespace index namespace_uri resolves to at connect time, so this
-# doesn't hardcode a specific server's index numbering (which shifts
-# depending on which companion namespaces a given CODESYS version
-# registers) — only the URI, which is what's actually stable.
+# node_addressing defaults to "auto": on connect the app searches the
+# server's whole Objects tree for the canonical tag names it already knows
+# it needs (section 4) and uses wherever it finds them — so a normal user
+# supplies nothing here but the endpoint (localhost for a PLC on this same
+# machine). namespace_uri / browse_path_prefix are used only by the
+# explicit "browse" mode, and node_id_pattern only by "node_id" mode; both
+# are for non-standard servers or as a manual override, and are left here
+# pre-filled with CODESYS Control Win V3's real out-of-the-box shape.
 opcua:
   endpoint: "opc.tcp://localhost:4840"
   namespace_uri: "urn:symbolset:Device:Application:Symbol Set"
   browse_path_prefix: ["{ns}:Symbol Set", "{ns}:GVL_PLC"]
   watchdog_timeout_s: 2.0
-  # Node addressing mode. "browse" (default, matches tools/mock_plc.py's
-  # default mode) walks browse_path_prefix then each tag's own browse name
-  # under the namespace index. "node_id" instead builds each tag's NodeId
-  # directly from node_id_pattern below, for servers that expose symbols by
-  # string NodeId rather than a walkable Objects tree — CODESYS's own
-  # convention (browse_path_prefix/namespace_uri are unused in this mode).
-  node_addressing: "browse"
+  # "auto" (default) finds the tags by name anywhere on the server, no
+  # namespace/path needed. "browse" walks browse_path_prefix then each
+  # tag's own browse name under the namespace index. "node_id" builds each
+  # tag's NodeId directly from node_id_pattern below, for servers that
+  # expose symbols by string NodeId rather than a walkable Objects tree.
+  node_addressing: "auto"
   # {ns} -> namespace index resolved from namespace_uri, {tag} -> canonical
   # tag name (section 4). Only used when node_addressing: "node_id". This
   # is CODESYS's own symbol NodeId convention; adjust the GVL name to match

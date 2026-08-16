@@ -54,6 +54,7 @@ alone, not on _loop()'s read/write success.
 import asyncio
 import logging
 import time
+from collections import deque
 
 from asyncua import Client, ua
 
@@ -179,13 +180,64 @@ class OpcuaLink:
             'error': self._error,
         }
 
+    async def _autolocate_nodes(self, client) -> dict:
+        """Find every canonical tag by name anywhere in the server's Objects
+        tree, so a user never has to supply a namespace URI or browse path —
+        the app already knows exactly which tag names it needs (section 4),
+        so it can go find them itself. Breadth-first, one round trip per
+        container (get_children_descriptions), bounded by a visit/depth
+        budget so a pathological tree can't hang the connect. Groups hits by
+        namespace and returns the namespace that holds the most, filling any
+        stragglers from other namespaces — handles a server that splits
+        symbols oddly without any config."""
+        targets = set(READ_TAGS) | set(WRITE_TAGS)
+        found: dict[int, dict] = {}
+        seen = set()
+        queue = deque([(client.get_objects_node(), 0)])
+        visited = 0
+        while queue and visited < 5000:
+            node, depth = queue.popleft()
+            try:
+                descs = await node.get_children_descriptions()
+            except Exception:
+                continue
+            visited += 1
+            for d in descs:
+                name = d.BrowseName.Name
+                if d.NodeClass == ua.NodeClass.Variable and name in targets:
+                    found.setdefault(d.BrowseName.NamespaceIndex, {})[name] = client.get_node(d.NodeId)
+                elif d.NodeClass == ua.NodeClass.Object and depth < 10:
+                    key = d.NodeId.to_string()
+                    if key not in seen:
+                        seen.add(key)
+                        queue.append((client.get_node(d.NodeId), depth + 1))
+        if not found:
+            return {}
+        best = max(found, key=lambda k: len(found[k]))
+        nodes = dict(found[best])
+        for ns_tags in found.values():
+            for tag, node in ns_tags.items():
+                nodes.setdefault(tag, node)
+        return nodes
+
     async def connect(self):
         client = Client(url=self.endpoint)
         await client.connect()
         try:
-            ns_idx = await client.get_namespace_index(self._namespace_uri)
             nodes = {}
-            if self._node_addressing == "node_id":
+            if self._node_addressing == "auto":
+                nodes = await self._autolocate_nodes(client)
+                missing = (set(READ_TAGS) | set(WRITE_TAGS)) - set(nodes)
+                if missing:
+                    raise RuntimeError(
+                        "couldn't find the compressor tags on this server "
+                        f"({len(missing)} missing, e.g. {', '.join(sorted(missing)[:3])}). "
+                        "Is this the right PLC, and is its Symbol Configuration published?"
+                        if nodes else
+                        "no compressor tags found on this server — is this the right PLC, "
+                        "and does its CODESYS project have a published Symbol Configuration?")
+            elif self._node_addressing == "node_id":
+                ns_idx = await client.get_namespace_index(self._namespace_uri)
                 for tag in set(READ_TAGS) | set(WRITE_TAGS):
                     node_id = resolve_node_id(self._node_id_pattern, ns_idx, tag)
                     nodes[tag] = client.get_node(node_id)
@@ -194,6 +246,7 @@ class OpcuaLink:
                 # here, not silently in the first _loop() tick.
                 await nodes['WD_6001'].read_value()
             else:
+                ns_idx = await client.get_namespace_index(self._namespace_uri)
                 base = client.get_objects_node()
                 # "{ns}:Name" segments resolve against ns_idx at connect
                 # time, same as node_id_pattern's {ns} — so config.yaml's
