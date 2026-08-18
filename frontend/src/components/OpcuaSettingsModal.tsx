@@ -323,7 +323,7 @@ export default function OpcuaSettingsModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-base font-semibold text-[var(--text-value)]">Connect to a PLC</h2>
+          <h2 className="text-base font-medium text-[var(--text-value)]">Connect to a PLC</h2>
           <button onClick={onClose} className="text-[var(--text-tag)] hover:text-[var(--text-label)]">
             ✕
           </button>

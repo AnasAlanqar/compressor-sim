@@ -103,7 +103,7 @@ function SwitchTile({
         <span className="text-[11px] leading-tight text-[var(--text-value)]">{label}</span>
         <span
           className={`h-2 w-2 shrink-0 rounded-full ${
-            checked ? 'bg-[var(--text-value)] shadow-[0_0_5px_1.5px_rgba(52,211,153,0.6)]' : 'bg-[var(--btn-face-hover)]'
+            checked ? 'bg-[var(--text-value)]' : 'bg-[var(--btn-face-hover)]'
           }`}
         />
       </span>
@@ -168,7 +168,7 @@ function StatusChip({ label, hint, on }: { label: string; hint?: string; on: boo
       </span>
       <span
         className={`h-2 w-2 shrink-0 rounded-full ${
-          on ? 'bg-[var(--text-value)] shadow-[0_0_5px_1.5px_rgba(52,211,153,0.6)]' : 'bg-[var(--btn-face-hover)]'
+          on ? 'bg-[var(--text-value)]' : 'bg-[var(--btn-face-hover)]'
         }`}
       />
     </div>
@@ -190,7 +190,7 @@ function ReadoutChip({ label, hint, value }: { label: string; hint?: string; val
 function Section({ title, cols = 2, children }: { title: string; cols?: 2 | 3; children: React.ReactNode }) {
   return (
     <div className="mb-3 break-inside-avoid rounded border border-[var(--hmi-rule)] bg-[var(--hmi-surface)] p-1.5">
-      <h3 className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--text-tag)]">{title}</h3>
+      <h3 className="mb-1 text-[10px] font-medium uppercase tracking-wide text-[var(--text-tag)]">{title}</h3>
       <div className={`grid gap-1 ${cols === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>{children}</div>
     </div>
   );

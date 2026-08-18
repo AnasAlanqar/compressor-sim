@@ -106,7 +106,7 @@ interface Props {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="mb-3 break-inside-avoid rounded border border-[var(--hmi-rule)] bg-[var(--hmi-surface)] p-3">
-      <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-[var(--text-tag)]">{title}</h3>
+      <h3 className="mb-1 text-xs font-medium uppercase tracking-wide text-[var(--text-tag)]">{title}</h3>
       {children}
     </div>
   );

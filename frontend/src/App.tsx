@@ -10,6 +10,7 @@ import Tabs from './components/Tabs';
 import TagTable from './components/TagTable';
 import TrendChart from './components/TrendChart';
 import type { AlarmTable } from './lib/pid';
+import { formatTag, formatValue } from './lib/engUnits';
 
 function StatusDot({ status }: { status: string }) {
   const color =
@@ -25,7 +26,7 @@ function Readout({ label, value, unit, alarm }: { label: string; value: string; 
     <div className="flex flex-col items-start">
       <span className="text-xs uppercase tracking-widest" style={{ color: 'var(--text-tag)' }}>{label}</span>
       <span
-        className="tabular text-5xl font-semibold leading-tight"
+        className="tabular text-5xl font-medium leading-tight"
         style={{ color: alarm ? 'var(--alm-p1)' : 'var(--text-value)' }}
       >
         {value}
@@ -189,9 +190,9 @@ function AppShellNew() {
         className="flex flex-wrap items-center gap-x-12 gap-y-2 px-6 py-4"
         style={{ borderTop: 'var(--w-hairline) solid var(--hmi-rule)', backgroundColor: 'var(--hmi-chrome)' }}
       >
-        <Readout label="Suction" value={num('PT_1001').toFixed(1)} unit="psig" />
-        <Readout label="Final discharge" value={num('PT_1006').toFixed(0)} unit="psig" />
-        <Readout label="Speed" value={num('ST_1008').toFixed(0)} unit="rpm" />
+        <Readout label="Suction" value={formatTag('PT_1001', num('PT_1001')).text} unit={formatTag('PT_1001', num('PT_1001')).unit} />
+        <Readout label="Final discharge" value={formatTag('PT_1006', num('PT_1006')).text} unit={formatTag('PT_1006', num('PT_1006')).unit} />
+        <Readout label="Speed" value={formatValue('speed', num('ST_1008')).text} unit={formatValue('speed', num('ST_1008')).unit} />
         <Readout label="Flow" value={flows.m_comp.toFixed(2)} unit="kg/s" />
       </footer>
 

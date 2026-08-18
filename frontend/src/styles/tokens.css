@@ -63,6 +63,15 @@
   --font-label: 'IBM Plex Sans Condensed', 'Roboto Condensed', 'Barlow Condensed', system-ui;
   --font-value: 'IBM Plex Mono', 'JetBrains Mono', ui-monospace, monospace;
   --font-prose: 'IBM Plex Sans', system-ui;
+
+  /* ---- Type scale — the only sizes permitted anywhere (§5.2) --------- */
+  --fs-tag:      11px;
+  --fs-label:    12px;
+  --fs-status:   12px;
+  --fs-value-sm: 16px;
+  --fs-value:    20px;
+  --fs-value-lg: 28px;
+  --fs-header:   11px;
 }
 
 [data-theme="dark"] {

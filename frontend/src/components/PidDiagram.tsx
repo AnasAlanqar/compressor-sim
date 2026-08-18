@@ -1,6 +1,7 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import type { SimTags, Flows, ValvePositions, SimInsight } from '../hooks/useSimState';
 import { gaugeState, type AlarmTable, type GaugeState } from '../lib/pid';
+import { formatTag, formatValue } from '../lib/engUnits';
 
 // ISA-101: normal state carries no color at all. Alarm state is the only
 // thing color communicates — see tokens.css §"Alarm priorities" and
@@ -136,10 +137,19 @@ function ValveIcon({
           </circle>
         )}
       </g>
-      <text y={-72} textAnchor="middle" fontSize={26} fontFamily="ui-monospace, monospace" fontWeight={700} fill="var(--text-value)">
-        {pct.toFixed(0)}%
+      <text
+        y={-72}
+        textAnchor="middle"
+        fontSize={26}
+        fontFamily="var(--font-value)"
+        fontWeight={500}
+        fill="var(--text-value)"
+        style={{ fontVariantNumeric: 'tabular-nums' }}
+      >
+        {formatValue('FC', pct).text}
+        <tspan fontFamily="var(--font-label)" fill="var(--text-tag)"> {formatValue('FC', pct).unit}</tspan>
       </text>
-      <text y={52} textAnchor="middle" fontSize={14} fontWeight={700} letterSpacing={0.6} fill="var(--text-label)">
+      <text y={52} textAnchor="middle" fontSize={14} fontWeight={500} letterSpacing={0.6} fill="var(--text-label)">
         {stateWord}
       </text>
       <text y={78} textAnchor="middle" fontSize={19} fill="var(--text-label)">
@@ -194,12 +204,19 @@ function ReadingRow({ y, width, kind, value, unit, tag, state, simOnly }: Readin
         strokeWidth={2.4}
         strokeDasharray={simOnly ? '3 3' : undefined}
       />
-      <text x={chipX} y={y + 6.5} textAnchor="middle" fontSize={18} fontWeight={700} fill={accent}>
+      <text x={chipX} y={y + 6.5} textAnchor="middle" fontSize={18} fontWeight={500} fill={accent}>
         {kind}
       </text>
-      <text x={chipX + 34} y={y + 9} fontSize={32} fontFamily="var(--font-value)" fill={valueColor}>
+      <text
+        x={chipX + 34}
+        y={y + 9}
+        fontSize={32}
+        fontFamily="var(--font-value)"
+        fill={valueColor}
+        style={{ fontVariantNumeric: 'tabular-nums' }}
+      >
         {value}
-        <tspan fontSize={17} fill="var(--text-tag)">
+        <tspan fontSize={17} fontFamily="var(--font-label)" fill="var(--text-tag)">
           {' '}
           {unit}
         </tspan>
@@ -215,7 +232,7 @@ function ReadingRow({ y, width, kind, value, unit, tag, state, simOnly }: Readin
         {simOnly ? 'sim' : tag}
       </text>
       {stateWord && (
-        <text x={width / 2 - 16} y={y + 14} textAnchor="end" fontSize={14} fontWeight={700} letterSpacing={0.5} fill={valueColor}>
+        <text x={width / 2 - 16} y={y + 14} textAnchor="end" fontSize={14} fontWeight={500} letterSpacing={0.5} fill={valueColor}>
           {stateWord}
         </text>
       )}
@@ -261,7 +278,7 @@ function ReadoutCard({
       <circle cx={tapX} cy={tapY} r={4} fill="var(--pipe-signal)" />
       <g transform={`translate(${x},${y})`}>
         <rect x={-w / 2} y={-h / 2} width={w} height={h} rx={12} fill="var(--hmi-surface)" stroke="var(--hmi-rule-strong)" strokeWidth={2} />
-        <text x={0} y={-h / 2 + 27} textAnchor="middle" fontSize={16.5} fontWeight={600} letterSpacing={0.5} fill="var(--text-label)">
+        <text x={0} y={-h / 2 + 27} textAnchor="middle" fontSize={16.5} fontWeight={500} letterSpacing={0.5} fill="var(--text-label)">
           {title}
         </text>
         {rows.map((r, i) => (
@@ -279,11 +296,11 @@ function Legend({ x, y }: { x: number; y: number }) {
   return (
     <g transform={`translate(${x},${y})`}>
       <circle cx={0} cy={0} r={10} fill={KIND_ACCENT.P} fillOpacity={0.22} stroke={KIND_ACCENT.P} strokeWidth={1.8} />
-      <text x={0} y={4.5} textAnchor="middle" fontSize={11} fontWeight={700} fill={KIND_ACCENT.P}>P</text>
+      <text x={0} y={4.5} textAnchor="middle" fontSize={11} fontWeight={500} fill={KIND_ACCENT.P}>P</text>
       <text x={17} y={5} fontSize={13.5} fill="var(--text-label)">pressure</text>
 
       <circle cx={140} cy={0} r={10} fill={KIND_ACCENT.T} fillOpacity={0.22} stroke={KIND_ACCENT.T} strokeWidth={1.8} />
-      <text x={140} y={4.5} textAnchor="middle" fontSize={11} fontWeight={700} fill={KIND_ACCENT.T}>T</text>
+      <text x={140} y={4.5} textAnchor="middle" fontSize={11} fontWeight={500} fill={KIND_ACCENT.T}>T</text>
       <text x={157} y={5} fontSize={13.5} fill="var(--text-label)">temperature</text>
 
       <circle cx={0} cy={row} r={10} fill="var(--text-tag)" fillOpacity={0.22} stroke="var(--text-tag)" strokeWidth={1.8} />
@@ -409,8 +426,14 @@ function EngineBlock({ x, y, width, rpm }: { x: number; y: number; width: number
         {running ? 'RUNNING' : 'STOPPED'}
       </text>
       <g transform={`translate(${width / 2 - 6},78)`}>
-        <text textAnchor="middle" fontSize={34} fontFamily="var(--font-value)" fill={running ? 'var(--text-value)' : 'var(--text-disabled)'}>
-          {rpm.toFixed(0)}
+        <text
+          textAnchor="middle"
+          fontSize={34}
+          fontFamily="var(--font-value)"
+          fill={running ? 'var(--text-value)' : 'var(--text-disabled)'}
+          style={{ fontVariantNumeric: 'tabular-nums' }}
+        >
+          {formatValue('speed', rpm).text}
         </text>
         <text textAnchor="middle" y={20} fontSize={13} letterSpacing={0.3} fill="var(--text-tag)">
           RPM
@@ -570,8 +593,8 @@ export default function PidDiagram({ tags, flows, valves, alarms, cmdEcho, simIn
       <ReadoutCard
         x={xIn1} y={cardY2} tapX={xIn1} tapY={AXIS_Y} title="SUCTION"
         rows={[
-          { kind: 'P', value: P_s.toFixed(1), unit: 'psig', tag: 'PT_1001', state: gs('PT_1001', P_s) },
-          { kind: 'T', value: T_suc.toFixed(0), unit: '°F', tag: '', state: 'normal', simOnly: true },
+          { kind: 'P', value: formatTag('PT_1001', P_s).text, unit: formatTag('PT_1001', P_s).unit, tag: 'PT_1001', state: gs('PT_1001', P_s) },
+          { kind: 'T', value: formatValue('TT', T_suc).text, unit: formatValue('TT', T_suc).unit, tag: '', state: 'normal', simOnly: true },
         ]}
       />
       <Cylinder x={xCyl1} y={AXIS_Y} label="ST1" rpm={rpm} />
@@ -582,9 +605,9 @@ export default function PidDiagram({ tags, flows, valves, alarms, cmdEcho, simIn
       <ReadoutCard
         x={xMid12} y={cardY3} tapX={xMid12} tapY={AXIS_Y} title="ST1 OUT / ST2 IN"
         rows={[
-          { kind: 'P', value: P_1.toFixed(0), unit: 'psig', tag: 'PT_1002', state: gs('PT_1002', P_1) },
-          { kind: 'T', value: T_cyl1.toFixed(0), unit: '°F', tag: 'TT_2004', state: gs('TT_2004', T_cyl1) },
-          { kind: 'T', value: T_inter.toFixed(0), unit: '°F', tag: '', state: 'normal', simOnly: true },
+          { kind: 'P', value: formatTag('PT_1002', P_1).text, unit: formatTag('PT_1002', P_1).unit, tag: 'PT_1002', state: gs('PT_1002', P_1) },
+          { kind: 'T', value: formatTag('TT_2004', T_cyl1).text, unit: formatTag('TT_2004', T_cyl1).unit, tag: 'TT_2004', state: gs('TT_2004', T_cyl1) },
+          { kind: 'T', value: formatValue('TT', T_inter).text, unit: formatValue('TT', T_inter).unit, tag: '', state: 'normal', simOnly: true },
         ]}
       />
       <Pipe x1={xCooler1 + 60} y1={AXIS_Y} x2={xScrub2 - 38} y2={AXIS_Y} psig={P_1} flow={flows.m_comp} />
@@ -599,9 +622,9 @@ export default function PidDiagram({ tags, flows, valves, alarms, cmdEcho, simIn
       <ReadoutCard
         x={xMid23} y={cardY3} tapX={xMid23} tapY={AXIS_Y} title="ST2 OUT / ST3 IN"
         rows={[
-          { kind: 'P', value: P_2.toFixed(0), unit: 'psig', tag: 'PT_1003', state: gs('PT_1003', P_2) },
-          { kind: 'T', value: T_cyl2.toFixed(0), unit: '°F', tag: 'TT_2005', state: gs('TT_2005', T_cyl2) },
-          { kind: 'T', value: T_inter.toFixed(0), unit: '°F', tag: '', state: 'normal', simOnly: true },
+          { kind: 'P', value: formatTag('PT_1003', P_2).text, unit: formatTag('PT_1003', P_2).unit, tag: 'PT_1003', state: gs('PT_1003', P_2) },
+          { kind: 'T', value: formatTag('TT_2005', T_cyl2).text, unit: formatTag('TT_2005', T_cyl2).unit, tag: 'TT_2005', state: gs('TT_2005', T_cyl2) },
+          { kind: 'T', value: formatValue('TT', T_inter).text, unit: formatValue('TT', T_inter).unit, tag: '', state: 'normal', simOnly: true },
         ]}
       />
       <Pipe x1={xCooler2 + 60} y1={AXIS_Y} x2={xScrub3 - 38} y2={AXIS_Y} psig={P_2} flow={flows.m_comp} />
@@ -613,8 +636,8 @@ export default function PidDiagram({ tags, flows, valves, alarms, cmdEcho, simIn
       <ReadoutCard
         x={xOut3} y={cardY2} tapX={xOut3} tapY={AXIS_Y} title="ST3 OUT"
         rows={[
-          { kind: 'P', value: P_3.toFixed(0), unit: 'psig', tag: 'PT_1004', state: gs('PT_1004', P_3) },
-          { kind: 'T', value: T_cyl3.toFixed(0), unit: '°F', tag: 'TT_2006/07', state: gs('TT_2006', T_cyl3) },
+          { kind: 'P', value: formatTag('PT_1004', P_3).text, unit: formatTag('PT_1004', P_3).unit, tag: 'PT_1004', state: gs('PT_1004', P_3) },
+          { kind: 'T', value: formatTag('TT_2006', T_cyl3).text, unit: formatTag('TT_2006', T_cyl3).unit, tag: 'TT_2006/07', state: gs('TT_2006', T_cyl3) },
         ]}
       />
       <Pipe x1={xCyl3 + 72} y1={AXIS_Y} x2={xAfterclr - 60} y2={AXIS_Y} psig={P_3} flow={flows.m_comp} />
@@ -624,8 +647,8 @@ export default function PidDiagram({ tags, flows, valves, alarms, cmdEcho, simIn
       <ReadoutCard
         x={xAfterclr} y={cardY2} tapX={xAfterclr} tapY={AXIS_Y} title="AFTERCOOLER / FINAL"
         rows={[
-          { kind: 'P', value: P_d.toFixed(0), unit: 'psig', tag: 'PT_1006', state: gs('PT_1006', P_d) },
-          { kind: 'T', value: T_ac.toFixed(0), unit: '°F', tag: 'TT_2013', state: gs('TT_2013', T_ac) },
+          { kind: 'P', value: formatTag('PT_1006', P_d).text, unit: formatTag('PT_1006', P_d).unit, tag: 'PT_1006', state: gs('PT_1006', P_d) },
+          { kind: 'T', value: formatTag('TT_2013', T_ac).text, unit: formatTag('TT_2013', T_ac).unit, tag: 'TT_2013', state: gs('TT_2013', T_ac) },
         ]}
       />
 

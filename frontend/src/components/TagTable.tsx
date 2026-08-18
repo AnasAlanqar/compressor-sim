@@ -1,4 +1,5 @@
 import type { SimTags } from '../hooks/useSimState';
+import { formatTag } from '../lib/engUnits';
 
 export default function TagTable({ tags }: { tags: SimTags }) {
   return (
@@ -7,12 +8,18 @@ export default function TagTable({ tags }: { tags: SimTags }) {
         {Object.entries(tags)
           .filter(([k]) => !['flows', 'valves', 'cmd_echo', 'boundary', 'opcua'].includes(k))
           .sort(([a], [b]) => a.localeCompare(b))
-          .map(([k, v]) => (
-            <div key={k} className="tabular flex justify-between gap-2">
-              <span className="text-[var(--text-tag)]">{k}</span>
-              <span>{typeof v === 'number' ? v.toFixed(2) : String(v)}</span>
-            </div>
-          ))}
+          .map(([k, v]) => {
+            const formatted = typeof v === 'number' ? formatTag(k, v) : { text: String(v), unit: '' };
+            return (
+              <div key={k} className="tabular flex justify-between gap-2">
+                <span className="text-[var(--text-tag)]">{k}</span>
+                <span>
+                  {formatted.text}
+                  {formatted.unit && <span className="ml-1 text-[var(--text-tag)]">{formatted.unit}</span>}
+                </span>
+              </div>
+            );
+          })}
       </div>
     </div>
   );

@@ -1,3 +1,12 @@
+/* Self-hosted (no CDN — isolated plant network). Only 400/500 weights are
+   imported; the restyle permits no weight above 500 (§5.2). */
+@import '@fontsource/ibm-plex-sans-condensed/400.css';
+@import '@fontsource/ibm-plex-sans-condensed/500.css';
+@import '@fontsource/ibm-plex-mono/400.css';
+@import '@fontsource/ibm-plex-mono/500.css';
+@import '@fontsource/ibm-plex-sans/400.css';
+@import '@fontsource/ibm-plex-sans/500.css';
+
 @import './styles/tokens.css';
 @import './styles/tokens.legacy.css';
 
@@ -35,4 +44,12 @@ body {
 }
 .hmi-btn:disabled {
   opacity: 0.5;
+}
+
+/* Mimic text defaults to the label face; numeric readouts override with an
+   inline fontFamily="var(--font-value)" (mono) at the element itself.
+   Scoped off legacy mode — PidDiagramLegacy.tsx keeps its own original
+   (unset/browser-default) font so Ctrl+Shift+L stays a true comparison. */
+html:not([data-theme='legacy']) svg text {
+  font-family: var(--font-label);
 }
