@@ -101,10 +101,17 @@ export default function RightDock({
       </div>
 
       <SectionHeader>TOOLS</SectionHeader>
-      {/* ManualOverridePanel/FaultPanel's 2-3 col grids assume the old
-          full-width main-content slot; force single column so labels stop
-          wrapping at 240px. */}
-      <div className="flex-1 px-2 pb-2 [&_.grid-cols-2]:!grid-cols-1 [&_.grid-cols-3]:!grid-cols-1">
+      {/* ManualOverridePanel/FaultPanel assume the old full-width
+          main-content slot: a responsive CSS-columns split (columns-1
+          sm:columns-2 xl:columns-3) plus 2-3 col grids inside each section,
+          with some tiles (sliders) explicitly col-span-2 to fill a row.
+          At 240px the columns split alone was cramming three sections
+          (ENGINE/COOLERS/STATUS) side by side into ~70px slivers — force
+          the outer column count and the inner grids to 1. Forcing the grid
+          to 1 column while a child still asks for col-span-2 makes Grid
+          fabricate an implicit 2nd (auto-width) column to satisfy the
+          span, splitting the row again — so col-span-2 is neutralized too. */}
+      <div className="flex-1 px-2 pb-2 [&_.columns-1]:!columns-1 [&_.grid-cols-2]:!grid-cols-1 [&_.grid-cols-3]:!grid-cols-1 [&_.col-span-2]:!col-span-1">
         <Tabs
           tabs={[
             {
