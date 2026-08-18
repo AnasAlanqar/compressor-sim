@@ -128,6 +128,26 @@ def wait_for_port(port: int, timeout_s: float = 15.0) -> None:
     raise TimeoutError(f"backend did not start listening on port {port} within {timeout_s}s")
 
 
+class TitlebarApi:
+    """Exposed to the frontend as window.pywebview.api.* — backs the custom
+    titlebar's minimize/maximize/restore/close buttons (restyle spec §9),
+    since a frameless window has no native chrome to provide them."""
+
+    window = None  # set once the real window exists, in main()
+
+    def minimize(self) -> None:
+        TitlebarApi.window.minimize()
+
+    def maximize(self) -> None:
+        TitlebarApi.window.maximize()
+
+    def restore(self) -> None:
+        TitlebarApi.window.restore()
+
+    def close(self) -> None:
+        TitlebarApi.window.destroy()
+
+
 def fatal_message_box(text: str) -> None:
     if sys.platform == "win32":
         ctypes.windll.user32.MessageBoxW(0, text, "Compressor Simulator", 0x10)  # MB_ICONERROR
@@ -164,14 +184,23 @@ def main() -> None:
         )
         sys.exit(1)
 
+    # frameless + a custom in-page titlebar (App.tsx) — a stock Windows
+    # title bar on a plant control HMI is an instant "this is a web app"
+    # tell (restyle spec §9). easy_drag (default True) lets the titlebar
+    # region drag the window without any JS drag-tracking code, and
+    # pywebview already excludes real <button>/<input> elements from
+    # initiating a drag, so the minimize/maximize/close buttons still work.
     window = webview.create_window(
         "Compressor Simulator — Ariel JGH/4",
         f"http://127.0.0.1:{port}",
         width=1600,
         height=980,
         min_size=(1280, 760),
-        background_color="#1A1D21",
+        background_color="#C6C6C6",
+        frameless=True,
+        js_api=TitlebarApi(),
     )
+    TitlebarApi.window = window
     window.events.closing += lambda: (backend.stop(), True)
 
     try:

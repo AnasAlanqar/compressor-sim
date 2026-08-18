@@ -8,7 +8,6 @@ import AirCooler from './symbols/AirCooler';
 import GateValve from './symbols/GateValve';
 import ControlValve from './symbols/ControlValve';
 import BlowdownValve from './symbols/BlowdownValve';
-import GasEngine from './symbols/GasEngine';
 import MovingAnalogIndicator from './symbols/MovingAnalogIndicator';
 import type { AlarmBand } from '../lib/pid';
 
@@ -242,43 +241,20 @@ function BlowdownPlume({ x, y, active }: { x: number; y: number; active: boolean
 // Dedicated engine/crankshaft card — anchored below the compressor train,
 // not floating over the piping. Dashed drivelines drop from each cylinder
 // down to the card to show what it's driving.
-function EngineBlock({ x, y, width, rpm }: { x: number; y: number; width: number; rpm: number }) {
+// Replaces the old full-height engine card — engine data moved out to the
+// driver strip (§9 [E], DriverStrip.tsx) below the mimic. What's left here
+// is just the §9 [D] instruction: "delete the large empty rectangle around
+// the engine block, replace it with a bracket on the left/right edges of
+// the train it drives, plus a small label."
+function TrainBracket({ x, width, y, rpm }: { x: number; width: number; y: number; rpm: number }) {
   const running = rpm > 5;
-  const cx = width - 78;
+  const tick = 10;
   return (
-    <g transform={`translate(${x},${y})`}>
-      <rect
-        width={width}
-        height={136}
-        rx={12}
-        fill="var(--hmi-surface)"
-        stroke={running ? 'var(--equip-stroke)' : 'var(--equip-stroke-idle)'}
-        strokeWidth={running ? 1.5 : 1}
-      />
-      <text x={26} y={34} fontSize={17} fontWeight={500} letterSpacing={0.4} fill="var(--text-value)">
-        CAT G3516LE
+    <g>
+      <path d={`M${x},${y - tick} L${x},${y} L${x + width},${y} L${x + width},${y - tick}`} fill="none" stroke="var(--hmi-rule-strong)" strokeWidth="var(--w-hairline)" />
+      <text x={x + width / 2} y={y + 16} textAnchor="middle" fontSize={13} letterSpacing={0.3} fill="var(--text-tag)">
+        DRIVEN BY CAT G3516LE — {running ? 'RUNNING' : 'STOPPED'}
       </text>
-      <text x={26} y={56} fontSize={13.5} letterSpacing={0.3} fill="var(--text-tag)">
-        ENGINE / CRANKSHAFT
-      </text>
-      <text x={26} y={80} fontSize={13} fontWeight={500} letterSpacing={0.6} fill="var(--text-label)">
-        {running ? 'RUNNING' : 'STOPPED'}
-      </text>
-      <g transform={`translate(${width / 2 - 6},78)`}>
-        <text
-          textAnchor="middle"
-          fontSize={34}
-          fontFamily="var(--font-value)"
-          fill={running ? 'var(--text-value)' : 'var(--text-disabled)'}
-          style={{ fontVariantNumeric: 'tabular-nums' }}
-        >
-          {formatValue('speed', rpm).text}
-        </text>
-        <text textAnchor="middle" y={20} fontSize={13} letterSpacing={0.3} fill="var(--text-tag)">
-          RPM
-        </text>
-      </g>
-      <GasEngine x={cx} y={68} running={running} />
     </g>
   );
 }
@@ -357,7 +333,7 @@ export default function PidDiagram({ tags, flows, valves, alarms, cmdEcho, simIn
   const engineX = xCyl1 - 55;
   const engineY = AXIS_Y + 150;
   const engineW = xAfterclr - xCyl1 + 110;
-  const engineBottom = engineY + 136;
+  const engineBottom = engineY + 40;
 
   // bypass (recycle) loop: taps off *after* the aftercooler/before the
   // discharge ESD, drops below the engine card, runs back under the whole
@@ -473,9 +449,9 @@ export default function PidDiagram({ tags, flows, valves, alarms, cmdEcho, simIn
       />
 
       {/* engine / crankshaft card, anchored tight under the cylinders it drives */}
-      <EngineBlock x={engineX} y={engineY} width={engineW} rpm={rpm} />
+      <TrainBracket x={engineX} width={engineW} y={engineY} rpm={rpm} />
       {[xCyl1, xCyl2, xCyl3].map((cx, i) => (
-        <line key={i} x1={cx} y1={AXIS_Y + 67} x2={cx} y2={engineY} stroke="var(--hmi-rule-strong)" strokeWidth={2.4} strokeDasharray="4 5" />
+        <line key={i} x1={cx} y1={AXIS_Y + 67} x2={cx} y2={engineY - 10} stroke="var(--hmi-rule-strong)" strokeWidth={2.4} strokeDasharray="4 5" />
       ))}
 
       {/* discharge ESD -> pipeline, then a short stub to the boundary — no dead run */}
