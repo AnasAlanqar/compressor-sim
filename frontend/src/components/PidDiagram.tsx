@@ -86,11 +86,47 @@ function FlowDots({ path, flow }: { path: string; flow: number }) {
   );
 }
 
+// Static flow-direction chevrons on the main gas path, ~140px apart along
+// the segment centerline (§3) — a fixed ">" reference, not the animated
+// flow-dot motion FlowDots draws (that's removed in Phase 8).
+const CHEVRON_PITCH = 140;
+function Chevrons({ x1, y1, x2, y2 }: { x1: number; y1: number; x2: number; y2: number }) {
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const len = Math.hypot(dx, dy);
+  if (len < CHEVRON_PITCH * 0.75) return null;
+  const ux = dx / len;
+  const uy = dy / len;
+  const n = Math.max(1, Math.floor(len / CHEVRON_PITCH));
+  const start = (len - (n - 1) * CHEVRON_PITCH) / 2;
+  const chevrons = Array.from({ length: n }, (_, i) => start + i * CHEVRON_PITCH);
+  return (
+    <>
+      {chevrons.map((d) => {
+        const cx = x1 + ux * d;
+        const cy = y1 + uy * d;
+        // perpendicular half-width for the two chevron strokes
+        const px = -uy * 6;
+        const py = ux * 6;
+        const bx = -ux * 6;
+        const by = -uy * 6;
+        return (
+          <g key={d}>
+            <line x1={cx + px + bx} y1={cy + py + by} x2={cx} y2={cy} stroke="var(--pipe-minor)" strokeWidth={1.5} strokeLinecap="butt" />
+            <line x1={cx - px + bx} y1={cy - py + by} x2={cx} y2={cy} stroke="var(--pipe-minor)" strokeWidth={1.5} strokeLinecap="butt" />
+          </g>
+        );
+      })}
+    </>
+  );
+}
+
 function Pipe({ x1, y1, x2, y2, flow }: { x1: number; y1: number; x2: number; y2: number; psig: number; flow: number }) {
   const path = `M${x1},${y1} L${x2},${y2}`;
   return (
     <g>
-      <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="var(--pipe-major)" strokeWidth={11} strokeLinecap="round" />
+      <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="var(--pipe-major)" strokeWidth="var(--w-pipe-major)" strokeLinecap="butt" strokeLinejoin="miter" />
+      <Chevrons x1={x1} y1={y1} x2={x2} y2={y2} />
       <FlowDots path={path} flow={flow} />
     </g>
   );
@@ -274,7 +310,7 @@ function ReadoutCard({
   const h = cardHeight(rows.length);
   return (
     <g>
-      <line x1={tapX} y1={tapY} x2={x} y2={y + h / 2} stroke="var(--pipe-signal)" strokeWidth={1.4} strokeDasharray="3 4" />
+      <line x1={tapX} y1={tapY} x2={x} y2={y + h / 2} stroke="var(--pipe-signal)" strokeWidth="var(--w-signal)" strokeDasharray="3 3" />
       <circle cx={tapX} cy={tapY} r={4} fill="var(--pipe-signal)" />
       <g transform={`translate(${x},${y})`}>
         <rect x={-w / 2} y={-h / 2} width={w} height={h} rx={12} fill="var(--hmi-surface)" stroke="var(--hmi-rule-strong)" strokeWidth={2} />
@@ -665,14 +701,14 @@ export default function PidDiagram({ tags, flows, valves, alarms, cmdEcho, simIn
 
       {/* bypass / recycle loop: final discharge -> lower loop, under the
           engine card, back into suction before ST1 */}
-      <path d={bypassPath} fill="none" stroke="var(--pipe-minor)" strokeWidth={8} strokeDasharray={Z_byp < 2 ? '3 9' : undefined} strokeLinecap="round" />
+      <path d={bypassPath} fill="none" stroke="var(--pipe-minor)" strokeWidth="var(--w-pipe-minor)" strokeDasharray={Z_byp < 2 ? '3 9' : undefined} strokeLinecap="butt" />
       <ValveIcon x={bypassValveX} y={loopY} pct={Z_byp} label="Bypass / recycle" sub="FC_3002" />
       <FlowDots path={bypassPath} flow={flows.m_byp} />
 
       {/* blowdown: suction to atmosphere */}
       <Pipe x1={xBlowdown} y1={AXIS_Y + 77} x2={xBlowdown} y2={AXIS_Y + 300} psig={P_s} flow={flows.m_bdv} />
       <ValveIcon x={xBlowdown} y={AXIS_Y + 335} pct={Z_bdv} label="Blowdown" sub="CMD_4004" orientation="v" />
-      <line x1={xBlowdown} y1={AXIS_Y + 400} x2={xBlowdown} y2={AXIS_Y + 480} stroke="var(--pipe-minor)" strokeWidth={8} strokeLinecap="round" />
+      <line x1={xBlowdown} y1={AXIS_Y + 400} x2={xBlowdown} y2={AXIS_Y + 480} stroke="var(--pipe-minor)" strokeWidth="var(--w-pipe-minor)" strokeLinecap="butt" />
       <BlowdownPlume x={xBlowdown} y={AXIS_Y + 472} active={Z_bdv > 50 && suctionOn} />
       <text x={xBlowdown} y={AXIS_Y + 510} textAnchor="middle" fontSize={13.5} letterSpacing={0.4} fill="var(--text-tag)">
         atmosphere
