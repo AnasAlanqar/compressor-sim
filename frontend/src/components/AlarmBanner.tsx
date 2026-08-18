@@ -18,7 +18,7 @@ export default function AlarmBanner({
       className="flex h-7 shrink-0 items-center gap-3 pr-3"
       style={{ backgroundColor: 'var(--hmi-surface)', borderBottom: 'var(--w-hairline) solid var(--hmi-rule)' }}
     >
-      <div className="h-full" style={{ width: 4, backgroundColor: color }} />
+      <div className={unackedCount > 0 ? 'alarm-unacked-blink h-full' : 'h-full'} style={{ width: 4, backgroundColor: color }} />
       {highest ? (
         <>
           <span className="tabular text-xs" style={{ fontFamily: 'var(--font-value)', color: 'var(--text-tag)' }}>

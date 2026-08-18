@@ -46,10 +46,44 @@ body {
   opacity: 0.5;
 }
 
+/* §8: motion is reserved exclusively for the unacked-alarm indicator — the
+   only other animated elements (travelling flow dots, blowdown plume) were
+   removed in Phase 8. Respects prefers-reduced-motion: the ring still shows
+   (via opacity 1, no keyframes) but never flashes. */
+@keyframes alarm-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0.35; }
+}
+.alarm-unacked-blink {
+  animation: alarm-blink 1s step-end infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .alarm-unacked-blink {
+    animation: none;
+  }
+}
+
+/* §8: no shadows anywhere except the focus ring below. */
+* {
+  box-shadow: none;
+}
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
 /* Mimic text defaults to the label face; numeric readouts override with an
    inline fontFamily="var(--font-value)" (mono) at the element itself.
    Scoped off legacy mode — PidDiagramLegacy.tsx keeps its own original
    (unset/browser-default) font so Ctrl+Shift+L stays a true comparison. */
 html:not([data-theme='legacy']) svg text {
   font-family: var(--font-label);
+}
+
+/* §8: crisp 1px hairlines on axis-aligned primitives (pipe centerlines,
+   valve bodies, MAI ticks) instead of anti-aliased blur. Scoped off legacy
+   like the rule above — the frozen comparison keeps its original render. */
+html:not([data-theme='legacy']) svg line,
+html:not([data-theme='legacy']) svg rect {
+  shape-rendering: crispEdges;
 }

@@ -81,26 +81,10 @@ function useContainerHeight(width: number, refHeight: number) {
   return { ref, height };
 }
 
-// ---- flow-arrow animation: dots travelling a straight or curved segment,
-// speed and visibility driven by mass flow (section 6.2: "animation speed
-// proportional to mass flow, hidden when flow is zero") -----------------
-function FlowDots({ path, flow }: { path: string; flow: number }) {
-  if (flow < 1e-4) return null;
-  const dur = Math.max(0.4, Math.min(4, 0.6 / flow));
-  return (
-    <>
-      {[0, 0.33, 0.66].map((offset) => (
-        <circle key={offset} r={4.6} fill="var(--text-value)">
-          <animateMotion dur={`${dur}s`} begin={`${-offset * dur}s`} repeatCount="indefinite" path={path} />
-        </circle>
-      ))}
-    </>
-  );
-}
-
 // Static flow-direction chevrons on the main gas path, ~140px apart along
-// the segment centerline (§3) — a fixed ">" reference, not the animated
-// flow-dot motion FlowDots draws (that's removed in Phase 8).
+// the segment centerline (§3) — a fixed ">" reference. Phase 8 removed the
+// animated travelling-dot indicator that used to accompany these (motion
+// is reserved solely for the 1Hz unacked-alarm blink, §8).
 const CHEVRON_PITCH = 140;
 function Chevrons({ x1, y1, x2, y2 }: { x1: number; y1: number; x2: number; y2: number }) {
   const dx = x2 - x1;
@@ -133,13 +117,11 @@ function Chevrons({ x1, y1, x2, y2 }: { x1: number; y1: number; x2: number; y2: 
   );
 }
 
-function Pipe({ x1, y1, x2, y2, flow }: { x1: number; y1: number; x2: number; y2: number; psig: number; flow: number }) {
-  const path = `M${x1},${y1} L${x2},${y2}`;
+function Pipe({ x1, y1, x2, y2 }: { x1: number; y1: number; x2: number; y2: number; psig: number; flow: number }) {
   return (
     <g>
-      <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="var(--pipe-major)" strokeWidth="var(--w-pipe-major)" strokeLinecap="butt" strokeLinejoin="miter" />
+      <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="var(--pipe-major)" strokeWidth="var(--w-pipe-major)" strokeLinecap="butt" strokeLinejoin="miter" shapeRendering="crispEdges" />
       <Chevrons x1={x1} y1={y1} x2={x2} y2={y2} />
-      <FlowDots path={path} flow={flow} />
     </g>
   );
 }
@@ -227,16 +209,14 @@ function Legend({ x, y }: { x: number; y: number }) {
 }
 
 
+// Static release marks (Phase 8: no motion outside the alarm blink) — three
+// fixed, fading rings standing in for the plume that used to animate here.
 function BlowdownPlume({ x, y, active }: { x: number; y: number; active: boolean }) {
   if (!active) return null;
   return (
     <g transform={`translate(${x},${y})`}>
       {[0, 1, 2].map((i) => (
-        <circle key={i} r={5.5} fill="var(--pipe-minor)" opacity={0}>
-          <animate attributeName="cy" values="0;-50" dur="1.6s" begin={`${i * 0.5}s`} repeatCount="indefinite" />
-          <animate attributeName="opacity" values="0;0.5;0" dur="1.6s" begin={`${i * 0.5}s`} repeatCount="indefinite" />
-          <animate attributeName="r" values="4;15" dur="1.6s" begin={`${i * 0.5}s`} repeatCount="indefinite" />
-        </circle>
+        <circle key={i} cy={-i * 20} r={6 + i * 4} fill="none" stroke="var(--pipe-minor)" strokeWidth={1.5} opacity={0.5 - i * 0.15} />
       ))}
     </g>
   );
@@ -468,7 +448,6 @@ export default function PidDiagram({ tags, flows, valves, alarms, cmdEcho, simIn
           engine card, back into suction before ST1 */}
       <path d={bypassPath} fill="none" stroke="var(--pipe-minor)" strokeWidth="var(--w-pipe-minor)" strokeDasharray={Z_byp < 2 ? '3 9' : undefined} strokeLinecap="butt" />
       <ControlValve x={bypassValveX} y={loopY} pct={Z_byp} label="Bypass / recycle" tag="FC_3002" />
-      <FlowDots path={bypassPath} flow={flows.m_byp} />
 
       {/* blowdown: suction to atmosphere */}
       <Pipe x1={xBlowdown} y1={AXIS_Y + 77} x2={xBlowdown} y2={AXIS_Y + 300} psig={P_s} flow={flows.m_bdv} />
