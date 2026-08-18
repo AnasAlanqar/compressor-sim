@@ -9,7 +9,7 @@ export default function TagTable({ tags }: { tags: SimTags }) {
           .sort(([a], [b]) => a.localeCompare(b))
           .map(([k, v]) => (
             <div key={k} className="tabular flex justify-between gap-2">
-              <span className="text-neutral-500">{k}</span>
+              <span className="text-[var(--text-tag)]">{k}</span>
               <span>{typeof v === 'number' ? v.toFixed(2) : String(v)}</span>
             </div>
           ))}

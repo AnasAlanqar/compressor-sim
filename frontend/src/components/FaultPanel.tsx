@@ -105,8 +105,8 @@ interface Props {
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="mb-3 break-inside-avoid rounded border border-neutral-800 bg-neutral-900/60 p-3">
-      <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-neutral-400">{title}</h3>
+    <div className="mb-3 break-inside-avoid rounded border border-[var(--hmi-rule)] bg-[var(--hmi-surface)] p-3">
+      <h3 className="mb-1 text-xs font-semibold uppercase tracking-wide text-[var(--text-tag)]">{title}</h3>
       {children}
     </div>
   );
@@ -126,8 +126,8 @@ function Toggle({
   return (
     <label className="flex items-center justify-between gap-3 py-1.5 text-sm">
       <span className="flex flex-col">
-        <span className="text-neutral-200">{label}</span>
-        {hint && <span className="text-xs text-neutral-500">{hint}</span>}
+        <span className="text-[var(--text-value)]">{label}</span>
+        {hint && <span className="text-xs text-[var(--text-tag)]">{hint}</span>}
       </span>
       <button
         type="button"
@@ -135,11 +135,11 @@ function Toggle({
         aria-checked={checked}
         onClick={() => onChange(!checked)}
         className={`h-5 w-9 shrink-0 rounded-full border transition-colors ${
-          checked ? 'border-red-600 bg-red-800' : 'border-neutral-700 bg-neutral-800'
+          checked ? 'border-[var(--alm-p1)] bg-[var(--alm-p1)]' : 'border-[var(--hmi-rule-strong)] bg-[var(--btn-face)]'
         }`}
       >
         <span
-          className={`block h-3.5 w-3.5 translate-y-[1px] rounded-full bg-neutral-200 transition-transform ${
+          className={`block h-3.5 w-3.5 translate-y-[1px] rounded-full bg-[var(--equip-fill)] transition-transform ${
             checked ? 'translate-x-[19px]' : 'translate-x-[2px]'
           }`}
         />
@@ -166,8 +166,8 @@ function Slider({
   return (
     <div className="py-1.5 text-sm">
       <div className="flex items-baseline justify-between">
-        <span className="text-neutral-200">{label}</span>
-        <span className="tabular text-neutral-400">
+        <span className="text-[var(--text-value)]">{label}</span>
+        <span className="tabular text-[var(--text-tag)]">
           {value.toFixed(0)}
           {unit}
         </span>
@@ -179,7 +179,7 @@ function Slider({
         step={1}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="mt-1 w-full accent-red-600"
+        className="mt-1 w-full accent-[var(--alm-p1)]"
       />
     </div>
   );
@@ -258,7 +258,7 @@ export default function FaultPanel({ onFault, boundary }: Props) {
     <div className="flex flex-col gap-3">
       <button
         onClick={clearAll}
-        className="w-fit rounded border border-red-800 bg-red-950/60 px-3 py-1.5 text-sm text-red-300 hover:bg-red-900/60"
+        className="w-fit rounded border border-[var(--alm-p1)] bg-[var(--hmi-surface)] px-3 py-1.5 text-sm text-[var(--alm-p1)] hover:bg-[var(--hmi-surface)]"
       >
         Clear all faults
       </button>
@@ -309,11 +309,11 @@ export default function FaultPanel({ onFault, boundary }: Props) {
           onChange={(v) => set('disch_blocked', v)}
         />
         <div className="py-1.5 text-sm">
-          <div className="mb-1 text-neutral-200">Valve stuck</div>
+          <div className="mb-1 text-[var(--text-value)]">Valve stuck</div>
           <select
             value={f.valve_stuck}
             onChange={(e) => set('valve_stuck', e.target.value as FaultState['valve_stuck'])}
-            className="w-full rounded border border-neutral-700 bg-neutral-800 px-2 py-1 text-sm"
+            className="w-full rounded border border-[var(--hmi-rule-strong)] bg-[var(--btn-face)] px-2 py-1 text-sm"
           >
             <option value="">none</option>
             <option value="byp">Bypass</option>
@@ -408,25 +408,25 @@ export default function FaultPanel({ onFault, boundary }: Props) {
 
       <Section title="Signal freeze / invalid">
         <div className="grid grid-cols-[1fr_auto_auto] items-center gap-x-3 gap-y-1 text-xs">
-          <span className="text-neutral-500">tag</span>
-          <span className="text-neutral-500">freeze</span>
-          <span className="text-neutral-500">invalid</span>
+          <span className="text-[var(--text-tag)]">tag</span>
+          <span className="text-[var(--text-tag)]">freeze</span>
+          <span className="text-[var(--text-tag)]">invalid</span>
           {AI_TAGS.map(([tag, label]) => (
             <Fragment key={tag}>
-              <span className="text-neutral-300" title={label}>
+              <span className="text-[var(--text-label)]" title={label}>
                 {tag}
               </span>
               <input
                 type="checkbox"
                 checked={f.signal_freeze.includes(tag)}
                 onChange={() => toggleInList('signal_freeze', tag)}
-                className="accent-red-600"
+                className="accent-[var(--alm-p1)]"
               />
               <input
                 type="checkbox"
                 checked={f.signal_invalid.includes(tag)}
                 onChange={() => toggleInList('signal_invalid', tag)}
-                className="accent-red-600"
+                className="accent-[var(--alm-p1)]"
               />
             </Fragment>
           ))}

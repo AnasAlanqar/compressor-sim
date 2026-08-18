@@ -1,15 +1,11 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import type { SimTags, Flows, ValvePositions, SimInsight } from '../hooks/useSimState';
 import { gaugeState, type AlarmTable, type GaugeState } from '../lib/pid';
+import { pressureToColor, valveColor, STATE_COLOR } from '../lib/pidLegacy';
 
-// ISA-101: normal state carries no color at all. Alarm state is the only
-// thing color communicates — see tokens.css §"Alarm priorities" and
-// THEME.md. gaugeState -> token name, resolved via var() at paint time.
-const STATE_TOKEN: Record<GaugeState, string> = {
-  normal: 'var(--text-value)',
-  amber: 'var(--alm-p2)',
-  red: 'var(--alm-p1)',
-};
+// Frozen snapshot of the pre-restyle P&ID mimic, captured 2026-08-18
+// (hmi-baseline-20260818) so Ctrl+Shift+L has a true old-app comparison.
+// Do not edit to match new features — extend PidDiagram.tsx instead.
 
 interface Props {
   tags: SimTags;
@@ -77,7 +73,7 @@ function FlowDots({ path, flow }: { path: string; flow: number }) {
   return (
     <>
       {[0, 0.33, 0.66].map((offset) => (
-        <circle key={offset} r={4.6} fill="var(--text-value)">
+        <circle key={offset} r={4.6} fill="#e7ecf3">
           <animateMotion dur={`${dur}s`} begin={`${-offset * dur}s`} repeatCount="indefinite" path={path} />
         </circle>
       ))}
@@ -85,11 +81,11 @@ function FlowDots({ path, flow }: { path: string; flow: number }) {
   );
 }
 
-function Pipe({ x1, y1, x2, y2, flow }: { x1: number; y1: number; x2: number; y2: number; psig: number; flow: number }) {
+function Pipe({ x1, y1, x2, y2, psig, flow }: { x1: number; y1: number; x2: number; y2: number; psig: number; flow: number }) {
   const path = `M${x1},${y1} L${x2},${y2}`;
   return (
     <g>
-      <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="var(--pipe-major)" strokeWidth={11} strokeLinecap="round" />
+      <line x1={x1} y1={y1} x2={x2} y2={y2} stroke={pressureToColor(psig)} strokeWidth={11} strokeLinecap="round" />
       <FlowDots path={path} flow={flow} />
     </g>
   );
@@ -115,48 +111,46 @@ function ValveIcon({
   sub: string;
   orientation?: 'h' | 'v';
 }) {
+  const color = valveColor(pct);
   const closed = pct < 2;
   const open = pct > 98;
   const transit = !closed && !open;
-  // Position, not color, carries valve state (§7): closed fills solid,
-  // open reads hollow against the canvas, in-transit sits between the two.
-  const color = closed ? 'var(--equip-fill)' : open ? 'var(--hmi-canvas)' : 'var(--equip-fill-active)';
   const rot = orientation === 'v' ? 90 : 0;
   // State is carried by the glyph shape and colour, but also spelled out as
   // text so open/closed/transit reads without relying on colour perception.
   const stateWord = closed ? 'CLOSED' : open ? 'OPEN' : 'MOVING';
   return (
     <g transform={`translate(${x},${y})`}>
+      {open && <circle r={58} fill={color} opacity={0.16} />}
       <g transform={`rotate(${rot})`}>
-        <path d="M-46,-32 L-46,32 L0,0 Z M46,-32 L46,32 L0,0 Z" fill={color} stroke="var(--equip-stroke)" strokeWidth={3} />
-        {closed && <rect x={-10} y={-36} width={20} height={72} rx={4} fill="var(--hmi-canvas)" stroke={color} strokeWidth={3} />}
+        <path d="M-46,-32 L-46,32 L0,0 Z M46,-32 L46,32 L0,0 Z" fill={color} stroke="#0a0e14" strokeWidth={3} />
+        {closed && <rect x={-10} y={-36} width={20} height={72} rx={4} fill="#0a0e14" stroke={color} strokeWidth={3} />}
         {transit && (
-          <circle r={52} fill="none" stroke="var(--equip-stroke)" strokeWidth={4.5} strokeDasharray="8 8" strokeOpacity={0.85}>
+          <circle r={52} fill="none" stroke={color} strokeWidth={4.5} strokeDasharray="8 8" strokeOpacity={0.85}>
             <animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="2.2s" repeatCount="indefinite" />
           </circle>
         )}
       </g>
-      <text y={-72} textAnchor="middle" fontSize={26} fontFamily="ui-monospace, monospace" fontWeight={700} fill="var(--text-value)">
+      <text y={-72} textAnchor="middle" fontSize={26} fontFamily="ui-monospace, monospace" fontWeight={700} fill={color}>
         {pct.toFixed(0)}%
       </text>
-      <text y={52} textAnchor="middle" fontSize={14} fontWeight={700} letterSpacing={0.6} fill="var(--text-label)">
+      <text y={52} textAnchor="middle" fontSize={14} fontWeight={700} letterSpacing={0.6} fill={color}>
         {stateWord}
       </text>
-      <text y={78} textAnchor="middle" fontSize={19} fill="var(--text-label)">
+      <text y={78} textAnchor="middle" fontSize={19} className="fill-neutral-200">
         {label}
       </text>
-      <text y={99} textAnchor="middle" fontSize={15} fill="var(--text-tag)">
+      <text y={99} textAnchor="middle" fontSize={15} className="fill-neutral-400">
         {sub}
       </text>
     </g>
   );
 }
 
-// P vs T get a fixed identity, independent of alarm state, so the two
-// quantities are visually distinguishable regardless of alarm — both read
-// as --text-tag now (§7: normal state carries no color); only the kind
-// letter's weight/position, not hue, tells P from T.
-const KIND_ACCENT: Record<'P' | 'T', string> = { P: 'var(--text-tag)', T: 'var(--text-tag)' };
+// P vs T get a fixed identity colour, independent of alarm state, so the
+// two quantities are visually distinguishable at a glance regardless of
+// whether either is currently in alarm.
+const KIND_ACCENT: Record<'P' | 'T', string> = { P: '#38bdf8', T: '#a78bfa' };
 
 interface ReadingSpec {
   kind: 'P' | 'T';
@@ -179,7 +173,7 @@ const STATE_WORD: Record<GaugeState, string | null> = { normal: null, amber: 'AL
 
 function ReadingRow({ y, width, kind, value, unit, tag, state, simOnly }: ReadingSpec & { y: number; width: number }) {
   const accent = KIND_ACCENT[kind];
-  const valueColor = simOnly ? 'var(--text-disabled)' : STATE_TOKEN[state];
+  const valueColor = simOnly ? '#9aa2b1' : STATE_COLOR[state];
   const chipX = -width / 2 + 28;
   const stateWord = simOnly ? null : STATE_WORD[state];
   return (
@@ -197,9 +191,9 @@ function ReadingRow({ y, width, kind, value, unit, tag, state, simOnly }: Readin
       <text x={chipX} y={y + 6.5} textAnchor="middle" fontSize={18} fontWeight={700} fill={accent}>
         {kind}
       </text>
-      <text x={chipX + 34} y={y + 9} fontSize={32} fontFamily="var(--font-value)" fill={valueColor}>
+      <text x={chipX + 34} y={y + 9} fontSize={32} fontFamily="ui-monospace, monospace" fill={valueColor}>
         {value}
-        <tspan fontSize={17} fill="var(--text-tag)">
+        <tspan fontSize={17} fill="#8b93a1">
           {' '}
           {unit}
         </tspan>
@@ -210,7 +204,7 @@ function ReadingRow({ y, width, kind, value, unit, tag, state, simOnly }: Readin
         textAnchor="end"
         fontSize={15}
         fontStyle={simOnly ? 'italic' : 'normal'}
-        fill="var(--text-tag)"
+        fill={simOnly ? '#8b93a1' : '#7d8695'}
       >
         {simOnly ? 'sim' : tag}
       </text>
@@ -257,11 +251,11 @@ function ReadoutCard({
   const h = cardHeight(rows.length);
   return (
     <g>
-      <line x1={tapX} y1={tapY} x2={x} y2={y + h / 2} stroke="var(--pipe-signal)" strokeWidth={1.4} strokeDasharray="3 4" />
-      <circle cx={tapX} cy={tapY} r={4} fill="var(--pipe-signal)" />
+      <line x1={tapX} y1={tapY} x2={x} y2={y + h / 2} stroke="#2f3846" strokeWidth={1.4} strokeDasharray="3 4" />
+      <circle cx={tapX} cy={tapY} r={4} fill="#2f3846" />
       <g transform={`translate(${x},${y})`}>
-        <rect x={-w / 2} y={-h / 2} width={w} height={h} rx={12} fill="var(--hmi-surface)" stroke="var(--hmi-rule-strong)" strokeWidth={2} />
-        <text x={0} y={-h / 2 + 27} textAnchor="middle" fontSize={16.5} fontWeight={600} letterSpacing={0.5} fill="var(--text-label)">
+        <rect x={-w / 2} y={-h / 2} width={w} height={h} rx={12} fill="#0f141b" stroke="#39424f" strokeWidth={2} />
+        <text x={0} y={-h / 2 + 27} textAnchor="middle" fontSize={16.5} fontWeight={600} letterSpacing={0.5} className="fill-neutral-300">
           {title}
         </text>
         {rows.map((r, i) => (
@@ -280,18 +274,18 @@ function Legend({ x, y }: { x: number; y: number }) {
     <g transform={`translate(${x},${y})`}>
       <circle cx={0} cy={0} r={10} fill={KIND_ACCENT.P} fillOpacity={0.22} stroke={KIND_ACCENT.P} strokeWidth={1.8} />
       <text x={0} y={4.5} textAnchor="middle" fontSize={11} fontWeight={700} fill={KIND_ACCENT.P}>P</text>
-      <text x={17} y={5} fontSize={13.5} fill="var(--text-label)">pressure</text>
+      <text x={17} y={5} fontSize={13.5} className="fill-neutral-300">pressure</text>
 
       <circle cx={140} cy={0} r={10} fill={KIND_ACCENT.T} fillOpacity={0.22} stroke={KIND_ACCENT.T} strokeWidth={1.8} />
       <text x={140} y={4.5} textAnchor="middle" fontSize={11} fontWeight={700} fill={KIND_ACCENT.T}>T</text>
-      <text x={157} y={5} fontSize={13.5} fill="var(--text-label)">temperature</text>
+      <text x={157} y={5} fontSize={13.5} className="fill-neutral-300">temperature</text>
 
-      <circle cx={0} cy={row} r={10} fill="var(--text-tag)" fillOpacity={0.22} stroke="var(--text-tag)" strokeWidth={1.8} />
-      <text x={17} y={row + 5} fontSize={13.5} fill="var(--text-tag)">
+      <circle cx={0} cy={row} r={10} fill="#9aa2b1" fillOpacity={0.22} stroke="#9aa2b1" strokeWidth={1.8} />
+      <text x={17} y={row + 5} fontSize={13.5} className="fill-neutral-400">
         solid + tag id — real PLC instrument
       </text>
-      <circle cx={0} cy={row * 2} r={10} fill="none" stroke="var(--text-tag)" strokeWidth={1.8} strokeDasharray="3 3" />
-      <text x={17} y={row * 2 + 5} fontSize={13.5} fontStyle="italic" fill="var(--text-tag)">
+      <circle cx={0} cy={row * 2} r={10} fill="none" stroke="#9aa2b1" strokeWidth={1.8} strokeDasharray="3 3" />
+      <text x={17} y={row * 2 + 5} fontSize={13.5} fontStyle="italic" className="fill-neutral-400">
         dashed + "sim" — no field TT, model estimate only
       </text>
     </g>
@@ -300,57 +294,65 @@ function Legend({ x, y }: { x: number; y: number }) {
 
 function Cylinder({ x, y, label, rpm }: { x: number; y: number; label: string; rpm: number }) {
   const running = rpm > 5;
+  const dur = running ? Math.max(0.15, 60 / Math.max(rpm, 1) / 4) : 0;
   return (
     <g transform={`translate(${x},${y})`}>
-      <rect
-        x={-72}
-        y={-67}
-        width={144}
-        height={134}
-        rx={14}
-        fill={running ? 'var(--equip-fill-active)' : 'var(--equip-fill)'}
-        stroke={running ? 'var(--equip-stroke)' : 'var(--equip-stroke-idle)'}
-        strokeWidth={running ? 1.5 : 1}
-      />
-      <text y={-10} textAnchor="middle" fontSize={28} fontWeight={500} fill="var(--text-label)">
+      <rect x={-72} y={-67} width={144} height={134} rx={14} fill="#1c2128" stroke="#4b5563" strokeWidth={3.4}>
+        {running && <animate attributeName="stroke" values="#4b5563;#6b7280;#4b5563" dur={`${dur}s`} repeatCount="indefinite" />}
+      </rect>
+      {running && (
+        <rect x={-72} y={-67} width={144} height={134} rx={14} fill="none" stroke="#f59e0b" strokeOpacity={0}>
+          <animate attributeName="stroke-opacity" values="0;0.5;0" dur={`${dur}s`} repeatCount="indefinite" />
+        </rect>
+      )}
+      <text y={-10} textAnchor="middle" fontSize={28} fontWeight={700} className="fill-neutral-200">
         {label}
       </text>
-      <text y={26} textAnchor="middle" fontSize={17} fontWeight={500} letterSpacing={0.6} fill="var(--text-label)">
+      <text
+        y={26}
+        textAnchor="middle"
+        fontSize={17}
+        fontWeight={700}
+        letterSpacing={0.6}
+        fill={running ? '#10b981' : '#7d8695'}
+      >
         {running ? 'RUN' : 'OFF'}
       </text>
-      <text y={101} textAnchor="middle" fontSize={15} fill="var(--text-tag)">
+      <text y={101} textAnchor="middle" fontSize={15} className="fill-neutral-400">
         cylinder
       </text>
     </g>
   );
 }
 
-function Cooler({ x, y, label, fansOn }: { x: number; y: number; label: string; fansOn: number; heat: number }) {
+function Cooler({ x, y, label, fansOn, heat }: { x: number; y: number; label: string; fansOn: number; heat: number }) {
   const running = fansOn > 0;
   return (
     <g transform={`translate(${x},${y})`}>
-      <rect
-        x={-60}
-        y={-54}
-        width={120}
-        height={108}
-        rx={9}
-        fill={running ? 'var(--equip-fill-active)' : 'var(--equip-fill)'}
-        stroke={running ? 'var(--equip-stroke)' : 'var(--equip-stroke-idle)'}
-        strokeWidth={running ? 1.5 : 1}
-      />
+      {/* heat glow, proportional to temperature drop across the cooler */}
+      <circle r={80} fill="#f59e0b" opacity={Math.min(0.35, heat * 0.35)} />
+      <rect x={-60} y={-54} width={120} height={108} rx={9} fill="#161b22" stroke="#4b5563" strokeWidth={3.4} />
       {[0, 1].map((i) => (
         <g key={i} transform={`translate(${-22 + i * 44},0)`}>
-          <path
-            d="M0,-22 L5.2,-5.2 L22,0 L5.2,5.2 L0,22 L-5.2,5.2 L-22,0 L-5.2,-5.2 Z"
-            fill={fansOn > i ? 'var(--equip-stroke)' : 'var(--equip-stroke-idle)'}
-          />
+          <g>
+            {fansOn > i && (
+              <animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="0.6s" repeatCount="indefinite" />
+            )}
+            <path d="M0,-22 L5.2,-5.2 L22,0 L5.2,5.2 L0,22 L-5.2,5.2 L-22,0 L-5.2,-5.2 Z" fill={fansOn > i ? '#93c5fd' : '#4b5563'} />
+          </g>
         </g>
       ))}
-      <text y={78} textAnchor="middle" fontSize={15} fill="var(--text-label)">
+      <text y={78} textAnchor="middle" fontSize={15} className="fill-neutral-300">
         {label}
       </text>
-      <text y={99} textAnchor="middle" fontSize={14} fontWeight={500} letterSpacing={0.5} fill="var(--text-label)">
+      <text
+        y={99}
+        textAnchor="middle"
+        fontSize={14}
+        fontWeight={700}
+        letterSpacing={0.5}
+        fill={running ? '#10b981' : '#7d8695'}
+      >
         {`${fansOn}/2 FANS ${running ? 'ON' : 'OFF'}`}
       </text>
     </g>
@@ -360,8 +362,8 @@ function Cooler({ x, y, label, fansOn }: { x: number; y: number; label: string; 
 function Vessel({ x, y, label }: { x: number; y: number; label: string }) {
   return (
     <g transform={`translate(${x},${y})`}>
-      <rect x={-38} y={-67} width={76} height={134} rx={38} fill="var(--equip-fill)" stroke="var(--equip-stroke-idle)" strokeWidth={1} />
-      <text y={101} textAnchor="middle" fontSize={15} fill="var(--text-label)">
+      <rect x={-38} y={-67} width={76} height={134} rx={38} fill="#161b22" stroke="#4b5563" strokeWidth={3.4} />
+      <text y={101} textAnchor="middle" fontSize={15} className="fill-neutral-300">
         {label}
       </text>
     </g>
@@ -373,7 +375,7 @@ function BlowdownPlume({ x, y, active }: { x: number; y: number; active: boolean
   return (
     <g transform={`translate(${x},${y})`}>
       {[0, 1, 2].map((i) => (
-        <circle key={i} r={5.5} fill="var(--pipe-minor)" opacity={0}>
+        <circle key={i} r={5.5} fill="#9ca3af" opacity={0}>
           <animate attributeName="cy" values="0;-50" dur="1.6s" begin={`${i * 0.5}s`} repeatCount="indefinite" />
           <animate attributeName="opacity" values="0;0.5;0" dur="1.6s" begin={`${i * 0.5}s`} repeatCount="indefinite" />
           <animate attributeName="r" values="4;15" dur="1.6s" begin={`${i * 0.5}s`} repeatCount="indefinite" />
@@ -395,29 +397,38 @@ function EngineBlock({ x, y, width, rpm }: { x: number; y: number; width: number
         width={width}
         height={136}
         rx={12}
-        fill="var(--hmi-surface)"
-        stroke={running ? 'var(--equip-stroke)' : 'var(--equip-stroke-idle)'}
-        strokeWidth={running ? 1.5 : 1}
-      />
-      <text x={26} y={34} fontSize={17} fontWeight={500} letterSpacing={0.4} fill="var(--text-value)">
+        fill="#12161d"
+        stroke={running ? '#3a4452' : '#262b33'}
+        strokeWidth={2}
+      >
+        {running && <animate attributeName="stroke" values="#3a4452;#4b5769;#3a4452" dur="1.4s" repeatCount="indefinite" />}
+      </rect>
+      <text x={26} y={34} fontSize={17} fontWeight={700} letterSpacing={0.4} className="fill-neutral-100">
         CAT G3516LE
       </text>
-      <text x={26} y={56} fontSize={13.5} letterSpacing={0.3} fill="var(--text-tag)">
+      <text x={26} y={56} fontSize={13.5} letterSpacing={0.3} className="fill-neutral-400">
         ENGINE / CRANKSHAFT
       </text>
-      <text x={26} y={80} fontSize={13} fontWeight={500} letterSpacing={0.6} fill="var(--text-label)">
+      <text
+        x={26}
+        y={80}
+        fontSize={13}
+        fontWeight={700}
+        letterSpacing={0.6}
+        fill={running ? '#10b981' : '#7d8695'}
+      >
         {running ? 'RUNNING' : 'STOPPED'}
       </text>
       <g transform={`translate(${width / 2 - 6},78)`}>
-        <text textAnchor="middle" fontSize={34} fontFamily="var(--font-value)" fill={running ? 'var(--text-value)' : 'var(--text-disabled)'}>
+        <text textAnchor="middle" fontSize={34} fontFamily="ui-monospace, monospace" fill={running ? '#e5e7eb' : '#6b7280'}>
           {rpm.toFixed(0)}
         </text>
-        <text textAnchor="middle" y={20} fontSize={13} letterSpacing={0.3} fill="var(--text-tag)">
+        <text textAnchor="middle" y={20} fontSize={13} letterSpacing={0.3} className="fill-neutral-400">
           RPM
         </text>
       </g>
       <g transform={`translate(${cx},68)`}>
-        <circle r={32} fill="var(--hmi-surface-sunken)" stroke="var(--equip-stroke-idle)" strokeWidth={4} />
+        <circle r={32} fill="#0f141b" stroke="#4b5563" strokeWidth={4} />
         <g>
           {running && (
             <animateTransform
@@ -429,15 +440,15 @@ function EngineBlock({ x, y, width, rpm }: { x: number; y: number; width: number
               repeatCount="indefinite"
             />
           )}
-          <line x1={0} y1={0} x2={25} y2={0} stroke="var(--equip-stroke)" strokeWidth={4} strokeLinecap="round" />
-          <circle r={4} fill="var(--equip-stroke)" />
+          <line x1={0} y1={0} x2={25} y2={0} stroke="#9ca3af" strokeWidth={4} strokeLinecap="round" />
+          <circle r={4} fill="#9ca3af" />
         </g>
       </g>
     </g>
   );
 }
 
-export default function PidDiagram({ tags, flows, valves, alarms, cmdEcho, simInsight }: Props) {
+export default function PidDiagramLegacy({ tags, flows, valves, alarms, cmdEcho, simInsight }: Props) {
   const { ref: containerRef, height: CANVAS_H } = useContainerHeight(CANVAS_W, CANVAS_H_REF);
   const AXIS_Y = BASE_AXIS_Y + Math.max(0, (CANVAS_H - CANVAS_H_REF) / 2);
 
@@ -535,25 +546,25 @@ export default function PidDiagram({ tags, flows, valves, alarms, cmdEcho, simIn
   return (
     <div ref={containerRef} className="h-full w-full">
     <svg viewBox={`0 0 ${CANVAS_W} ${CANVAS_H}`} className="h-full w-full" role="img" aria-label="Compressor P&amp;ID" preserveAspectRatio="xMidYMid meet">
-      <rect x={0} y={0} width={CANVAS_W} height={CANVAS_H} fill="var(--hmi-canvas)" />
+      <rect x={0} y={0} width={CANVAS_W} height={CANVAS_H} fill="#0d1117" />
 
       <Legend x={18} y={26} />
 
       {/* boundary labels — clear of the (now much taller) end vessels/valves,
           which span most of AXIS_Y +/- their half-height */}
-      <text x={20} y={AXIS_Y - 95} fontSize={15} letterSpacing={0.5} fill="var(--text-tag)">
+      <text x={20} y={AXIS_Y - 95} fontSize={15} letterSpacing={0.5} className="fill-neutral-400">
         SOURCE
       </text>
-      <text x={CANVAS_W - 20} y={AXIS_Y - 95} fontSize={15} letterSpacing={0.5} fill="var(--text-tag)" textAnchor="end">
+      <text x={CANVAS_W - 20} y={AXIS_Y - 95} fontSize={15} letterSpacing={0.5} className="fill-neutral-400" textAnchor="end">
         PIPELINE
       </text>
 
       {/* compressor train box, drawn first so equipment sits above it; the
           label lives in a tab notched into the border, not floating text
           that could be mistaken for a stray annotation. */}
-      <rect x={trainX0} y={trainY0} width={trainX1 - trainX0} height={trainY1 - trainY0} rx={12} fill="none" stroke="var(--hmi-rule-strong)" strokeWidth={1.6} strokeDasharray="5 5" />
-      <rect x={trainX0 + 18} y={trainY0 - 13} width={210} height={26} rx={5} fill="var(--hmi-canvas)" />
-      <text x={trainX0 + 18 + 105} y={trainY0 + 5} textAnchor="middle" fontSize={14} letterSpacing={0.8} fill="var(--text-label)">
+      <rect x={trainX0} y={trainY0} width={trainX1 - trainX0} height={trainY1 - trainY0} rx={12} fill="none" stroke="#38424f" strokeWidth={1.6} strokeDasharray="5 5" />
+      <rect x={trainX0 + 18} y={trainY0 - 13} width={210} height={26} rx={5} fill="#0d1117" />
+      <text x={trainX0 + 18 + 105} y={trainY0 + 5} textAnchor="middle" fontSize={14} letterSpacing={0.8} className="fill-neutral-300">
         COMPRESSOR TRAIN
       </text>
 
@@ -632,7 +643,7 @@ export default function PidDiagram({ tags, flows, valves, alarms, cmdEcho, simIn
       {/* engine / crankshaft card, anchored tight under the cylinders it drives */}
       <EngineBlock x={engineX} y={engineY} width={engineW} rpm={rpm} />
       {[xCyl1, xCyl2, xCyl3].map((cx, i) => (
-        <line key={i} x1={cx} y1={AXIS_Y + 67} x2={cx} y2={engineY} stroke="var(--hmi-rule-strong)" strokeWidth={2.4} strokeDasharray="4 5" />
+        <line key={i} x1={cx} y1={AXIS_Y + 67} x2={cx} y2={engineY} stroke="#2b3341" strokeWidth={2.4} strokeDasharray="4 5" />
       ))}
 
       {/* discharge ESD -> pipeline, then a short stub to the boundary — no dead run */}
@@ -642,16 +653,16 @@ export default function PidDiagram({ tags, flows, valves, alarms, cmdEcho, simIn
 
       {/* bypass / recycle loop: final discharge -> lower loop, under the
           engine card, back into suction before ST1 */}
-      <path d={bypassPath} fill="none" stroke="var(--pipe-minor)" strokeWidth={8} strokeDasharray={Z_byp < 2 ? '3 9' : undefined} strokeLinecap="round" />
+      <path d={bypassPath} fill="none" stroke={pressureToColor(P_d)} strokeWidth={8} strokeDasharray={Z_byp < 2 ? '3 9' : undefined} strokeLinecap="round" />
       <ValveIcon x={bypassValveX} y={loopY} pct={Z_byp} label="Bypass / recycle" sub="FC_3002" />
       <FlowDots path={bypassPath} flow={flows.m_byp} />
 
       {/* blowdown: suction to atmosphere */}
       <Pipe x1={xBlowdown} y1={AXIS_Y + 77} x2={xBlowdown} y2={AXIS_Y + 300} psig={P_s} flow={flows.m_bdv} />
       <ValveIcon x={xBlowdown} y={AXIS_Y + 335} pct={Z_bdv} label="Blowdown" sub="CMD_4004" orientation="v" />
-      <line x1={xBlowdown} y1={AXIS_Y + 400} x2={xBlowdown} y2={AXIS_Y + 480} stroke="var(--pipe-minor)" strokeWidth={8} strokeLinecap="round" />
+      <line x1={xBlowdown} y1={AXIS_Y + 400} x2={xBlowdown} y2={AXIS_Y + 480} stroke={pressureToColor(P_s)} strokeWidth={8} strokeLinecap="round" />
       <BlowdownPlume x={xBlowdown} y={AXIS_Y + 472} active={Z_bdv > 50 && suctionOn} />
-      <text x={xBlowdown} y={AXIS_Y + 510} textAnchor="middle" fontSize={13.5} letterSpacing={0.4} fill="var(--text-tag)">
+      <text x={xBlowdown} y={AXIS_Y + 510} textAnchor="middle" fontSize={13.5} letterSpacing={0.4} className="fill-neutral-400">
         atmosphere
       </text>
     </svg>

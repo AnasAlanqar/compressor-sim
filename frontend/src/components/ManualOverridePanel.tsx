@@ -96,18 +96,18 @@ function SwitchTile({
       disabled={disabled}
       onClick={() => onChange(!checked)}
       className={`flex flex-col gap-1 rounded border px-2 py-1 text-left transition-colors ${
-        checked ? 'border-emerald-700/70 bg-emerald-950/40' : 'border-neutral-800 bg-neutral-900/70'
-      } ${disabled ? 'opacity-40' : 'hover:border-neutral-600'}`}
+        checked ? 'border-[var(--hmi-rule-strong)] bg-[var(--hmi-surface)]' : 'border-[var(--hmi-rule)] bg-[var(--hmi-surface)]'
+      } ${disabled ? 'opacity-40' : 'hover:border-[var(--hmi-rule-strong)]'}`}
     >
       <span className="flex items-center justify-between gap-2">
-        <span className="text-[11px] leading-tight text-neutral-200">{label}</span>
+        <span className="text-[11px] leading-tight text-[var(--text-value)]">{label}</span>
         <span
           className={`h-2 w-2 shrink-0 rounded-full ${
-            checked ? 'bg-emerald-400 shadow-[0_0_5px_1.5px_rgba(52,211,153,0.6)]' : 'bg-neutral-700'
+            checked ? 'bg-[var(--text-value)] shadow-[0_0_5px_1.5px_rgba(52,211,153,0.6)]' : 'bg-[var(--btn-face-hover)]'
           }`}
         />
       </span>
-      <span className="font-mono text-[9px] text-neutral-500">{hint}</span>
+      <span className="font-mono text-[9px] text-[var(--text-tag)]">{hint}</span>
     </button>
   );
 }
@@ -126,10 +126,10 @@ function CompactSlider({
   onChange: (v: number) => void;
 }) {
   return (
-    <div className="rounded border border-neutral-800 bg-neutral-900/70 px-2 py-1">
+    <div className="rounded border border-[var(--hmi-rule)] bg-[var(--hmi-surface)] px-2 py-1">
       <div className="flex items-baseline justify-between gap-2">
-        <span className="text-[11px] text-neutral-200">{label}</span>
-        <span className="tabular font-mono text-[11px] text-emerald-400">{value.toFixed(0)}%</span>
+        <span className="text-[11px] text-[var(--text-value)]">{label}</span>
+        <span className="tabular font-mono text-[11px] text-[var(--text-value)]">{value.toFixed(0)}%</span>
       </div>
       <input
         type="range"
@@ -139,9 +139,9 @@ function CompactSlider({
         value={value}
         disabled={disabled}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="mt-1 h-1 w-full accent-emerald-600 disabled:opacity-40"
+        className="mt-1 h-1 w-full accent-[var(--focus-ring)] disabled:opacity-40"
       />
-      <div className="mt-0.5 font-mono text-[9px] text-neutral-500">{hint}</div>
+      <div className="mt-0.5 font-mono text-[9px] text-[var(--text-tag)]">{hint}</div>
     </div>
   );
 }
@@ -151,24 +151,24 @@ function PulseButton({ label, hint, onPress }: { label: string; hint?: string; o
     <button
       type="button"
       onClick={onPress}
-      className="rounded border border-neutral-800 bg-neutral-900/70 px-2 py-1 text-left transition-colors hover:border-neutral-600 hover:bg-neutral-800 active:bg-neutral-700"
+      className="rounded border border-[var(--hmi-rule)] bg-[var(--hmi-surface)] px-2 py-1 text-left transition-colors hover:border-[var(--hmi-rule-strong)] hover:bg-[var(--btn-face)] active:bg-[var(--btn-face-hover)]"
     >
-      <div className="text-[11px] text-neutral-200">{label}</div>
-      {hint && <div className="font-mono text-[9px] text-neutral-500">{hint}</div>}
+      <div className="text-[11px] text-[var(--text-value)]">{label}</div>
+      {hint && <div className="font-mono text-[9px] text-[var(--text-tag)]">{hint}</div>}
     </button>
   );
 }
 
 function StatusChip({ label, hint, on }: { label: string; hint?: string; on: boolean }) {
   return (
-    <div className="flex items-center justify-between gap-2 rounded border border-neutral-800 bg-neutral-900/70 px-2 py-1">
+    <div className="flex items-center justify-between gap-2 rounded border border-[var(--hmi-rule)] bg-[var(--hmi-surface)] px-2 py-1">
       <span className="flex flex-col leading-tight">
-        <span className="text-[11px] text-neutral-200">{label}</span>
-        {hint && <span className="font-mono text-[9px] text-neutral-500">{hint}</span>}
+        <span className="text-[11px] text-[var(--text-value)]">{label}</span>
+        {hint && <span className="font-mono text-[9px] text-[var(--text-tag)]">{hint}</span>}
       </span>
       <span
         className={`h-2 w-2 shrink-0 rounded-full ${
-          on ? 'bg-emerald-400 shadow-[0_0_5px_1.5px_rgba(52,211,153,0.6)]' : 'bg-neutral-700'
+          on ? 'bg-[var(--text-value)] shadow-[0_0_5px_1.5px_rgba(52,211,153,0.6)]' : 'bg-[var(--btn-face-hover)]'
         }`}
       />
     </div>
@@ -177,20 +177,20 @@ function StatusChip({ label, hint, on }: { label: string; hint?: string; on: boo
 
 function ReadoutChip({ label, hint, value }: { label: string; hint?: string; value: string }) {
   return (
-    <div className="flex items-center justify-between gap-2 rounded border border-neutral-800 bg-neutral-900/70 px-2 py-1">
+    <div className="flex items-center justify-between gap-2 rounded border border-[var(--hmi-rule)] bg-[var(--hmi-surface)] px-2 py-1">
       <span className="flex flex-col leading-tight">
-        <span className="text-[11px] text-neutral-200">{label}</span>
-        {hint && <span className="font-mono text-[9px] text-neutral-500">{hint}</span>}
+        <span className="text-[11px] text-[var(--text-value)]">{label}</span>
+        {hint && <span className="font-mono text-[9px] text-[var(--text-tag)]">{hint}</span>}
       </span>
-      <span className="tabular font-mono text-[12px] text-neutral-300">{value}</span>
+      <span className="tabular font-mono text-[12px] text-[var(--text-label)]">{value}</span>
     </div>
   );
 }
 
 function Section({ title, cols = 2, children }: { title: string; cols?: 2 | 3; children: React.ReactNode }) {
   return (
-    <div className="mb-3 break-inside-avoid rounded border border-neutral-800 bg-neutral-900/40 p-1.5">
-      <h3 className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-500">{title}</h3>
+    <div className="mb-3 break-inside-avoid rounded border border-[var(--hmi-rule)] bg-[var(--hmi-surface)] p-1.5">
+      <h3 className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--text-tag)]">{title}</h3>
       <div className={`grid gap-1 ${cols === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>{children}</div>
     </div>
   );
@@ -239,7 +239,7 @@ export default function ManualOverridePanel({ disabled, onChange, readback, live
   return (
     <div className="flex flex-col gap-2">
       {disabled && (
-        <div className="rounded border border-amber-700 bg-amber-950/40 px-2 py-1 text-[11px] text-amber-400">
+        <div className="rounded border border-[var(--alm-p2)] bg-[var(--hmi-surface)] px-2 py-1 text-[11px] text-[var(--alm-p2)]">
           OPC UA connected — the PLC is driving. These are read-only indicators.
         </div>
       )}

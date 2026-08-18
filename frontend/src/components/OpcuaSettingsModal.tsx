@@ -314,29 +314,29 @@ export default function OpcuaSettingsModal({
   const profileNames = Object.keys(profiles).sort();
 
   const field =
-    'rounded border border-neutral-700 bg-neutral-800 px-2 py-1 disabled:opacity-50';
+    'rounded border border-[var(--hmi-rule-strong)] bg-[var(--btn-face)] px-2 py-1 disabled:opacity-50';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
       <div
-        className="max-h-[90vh] w-[520px] max-w-full overflow-y-auto rounded border border-neutral-700 bg-neutral-900 p-4 text-sm text-neutral-200 shadow-xl"
+        className="max-h-[90vh] w-[520px] max-w-full overflow-y-auto rounded border border-[var(--hmi-rule-strong)] bg-[var(--hmi-surface)] p-4 text-sm text-[var(--text-value)]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-base font-semibold text-neutral-100">Connect to a PLC</h2>
-          <button onClick={onClose} className="text-neutral-500 hover:text-neutral-300">
+          <h2 className="text-base font-semibold text-[var(--text-value)]">Connect to a PLC</h2>
+          <button onClick={onClose} className="text-[var(--text-tag)] hover:text-[var(--text-label)]">
             ✕
           </button>
         </div>
 
         {/* Status */}
-        <div className="mb-3 flex items-center gap-2 rounded border border-neutral-800 bg-neutral-950 px-3 py-2">
-          <span className={`h-2.5 w-2.5 rounded-full ${connected ? 'bg-emerald-500' : 'bg-neutral-600'}`} />
-          <span className="text-neutral-300">
+        <div className="mb-3 flex items-center gap-2 rounded border border-[var(--hmi-rule)] bg-[var(--hmi-chrome)] px-3 py-2">
+          <span className={`h-2.5 w-2.5 rounded-full ${connected ? 'bg-[var(--text-value)]' : 'bg-[var(--hmi-surface-sunken)]'}`} />
+          <span className="text-[var(--text-label)]">
             {connected ? 'Connected' : 'Not connected'}
           </span>
           {connected && (
-            <span className="ml-1 truncate text-xs text-neutral-500" title={effectiveEndpoint}>
+            <span className="ml-1 truncate text-xs text-[var(--text-tag)]" title={effectiveEndpoint}>
               {location === 'local' ? 'this computer' : address}
             </span>
           )}
@@ -345,7 +345,7 @@ export default function OpcuaSettingsModal({
               <button
                 onClick={handleDisconnect}
                 disabled={busy}
-                className="rounded border border-neutral-700 bg-neutral-800 px-3 py-1 hover:bg-neutral-700 disabled:opacity-50"
+                className="rounded border border-[var(--hmi-rule-strong)] bg-[var(--btn-face)] px-3 py-1 hover:bg-[var(--btn-face-hover)] disabled:opacity-50"
               >
                 Disconnect
               </button>
@@ -353,7 +353,7 @@ export default function OpcuaSettingsModal({
               <button
                 onClick={handleConnect}
                 disabled={busy}
-                className="rounded border border-emerald-700 bg-emerald-950/50 px-4 py-1 font-medium text-emerald-300 hover:bg-emerald-900/50 disabled:opacity-50"
+                className="rounded border border-[var(--hmi-rule-strong)] bg-[var(--hmi-surface)] px-4 py-1 font-medium text-[var(--text-value)] hover:bg-[var(--hmi-surface)] disabled:opacity-50"
               >
                 {busy ? 'Connecting…' : 'Connect'}
               </button>
@@ -362,13 +362,13 @@ export default function OpcuaSettingsModal({
         </div>
 
         {connected && (
-          <div className="mb-3 rounded border border-amber-700/50 bg-amber-950/30 px-2 py-1 text-xs text-amber-400">
+          <div className="mb-3 rounded border border-[var(--alm-p2)] bg-[var(--hmi-surface)] px-2 py-1 text-xs text-[var(--alm-p2)]">
             Disconnect to change where the app connects.
           </div>
         )}
 
         {/* Where is the PLC */}
-        <div className="mb-2 text-xs uppercase tracking-wide text-neutral-500">Where is the PLC?</div>
+        <div className="mb-2 text-xs uppercase tracking-wide text-[var(--text-tag)]">Where is the PLC?</div>
         <div className="mb-3 flex flex-col gap-2">
           <label className="flex items-center gap-2">
             <input
@@ -379,7 +379,7 @@ export default function OpcuaSettingsModal({
               disabled={locked}
             />
             <span>This computer</span>
-            <span className="text-xs text-neutral-500">— CODESYS runs on this laptop</span>
+            <span className="text-xs text-[var(--text-tag)]">— CODESYS runs on this laptop</span>
           </label>
           <label className="flex items-center gap-2">
             <input
@@ -405,34 +405,34 @@ export default function OpcuaSettingsModal({
                 <button
                   onClick={handleScan}
                   disabled={locked || scanning}
-                  className="whitespace-nowrap rounded border border-neutral-700 bg-neutral-800 px-2 py-1 text-xs hover:bg-neutral-700 disabled:opacity-50"
+                  className="whitespace-nowrap rounded border border-[var(--hmi-rule-strong)] bg-[var(--btn-face)] px-2 py-1 text-xs hover:bg-[var(--btn-face-hover)] disabled:opacity-50"
                 >
                   {scanning ? 'Scanning…' : 'Scan my network'}
                 </button>
               </div>
 
               {scanning && (
-                <div className="text-xs text-neutral-500">
+                <div className="text-xs text-[var(--text-tag)]">
                   Looking for PLCs on your network — this takes a few seconds…
                 </div>
               )}
-              {scanError && <div className="text-xs text-red-400">{scanError}</div>}
+              {scanError && <div className="text-xs text-[var(--alm-p1)]">{scanError}</div>}
               {scanResults && scanResults.length === 0 && (
-                <div className="text-xs text-neutral-500">
+                <div className="text-xs text-[var(--text-tag)]">
                   No PLCs found. Make sure the PLC is powered on and on the same network, or type its
                   address above.
                 </div>
               )}
               {scanResults && scanResults.length > 0 && (
-                <div className="overflow-hidden rounded border border-neutral-800">
+                <div className="overflow-hidden rounded border border-[var(--hmi-rule)]">
                   {scanResults.map((s) => (
                     <button
                       key={s.address}
                       onClick={() => pickScanned(s)}
-                      className="flex w-full items-center justify-between border-b border-neutral-900 px-2 py-1.5 text-left last:border-0 hover:bg-neutral-800"
+                      className="flex w-full items-center justify-between border-b border-[var(--hmi-rule)] px-2 py-1.5 text-left last:border-0 hover:bg-[var(--btn-face)]"
                     >
-                      <span className="text-neutral-200">{s.name ?? 'OPC UA server'}</span>
-                      <span className="text-xs text-neutral-500">{s.address}</span>
+                      <span className="text-[var(--text-value)]">{s.name ?? 'OPC UA server'}</span>
+                      <span className="text-xs text-[var(--text-tag)]">{s.address}</span>
                     </button>
                   ))}
                 </div>
@@ -441,20 +441,20 @@ export default function OpcuaSettingsModal({
           )}
         </div>
 
-        {error && <div className="mb-2 text-xs text-red-400">{error}</div>}
+        {error && <div className="mb-2 text-xs text-[var(--alm-p1)]">{error}</div>}
 
         {/* Saved profiles */}
         {profileNames.length > 0 && (
           <div className="mb-3">
-            <div className="mb-1 text-xs uppercase tracking-wide text-neutral-500">Saved PLCs</div>
+            <div className="mb-1 text-xs uppercase tracking-wide text-[var(--text-tag)]">Saved PLCs</div>
             <div className="flex flex-wrap gap-1.5">
               {profileNames.map((name) => (
                 <div
                   key={name}
                   className={`flex items-center gap-1 rounded border px-2 py-1 text-xs ${
                     activeProfile === name
-                      ? 'border-emerald-600 bg-emerald-950/40 text-emerald-300'
-                      : 'border-neutral-700 bg-neutral-800 text-neutral-300'
+                      ? 'border-[var(--hmi-rule-strong)] bg-[var(--hmi-surface)] text-[var(--text-value)]'
+                      : 'border-[var(--hmi-rule-strong)] bg-[var(--btn-face)] text-[var(--text-label)]'
                   }`}
                 >
                   <button
@@ -467,7 +467,7 @@ export default function OpcuaSettingsModal({
                   <button
                     onClick={() => handleDelete(name)}
                     disabled={busy}
-                    className="text-neutral-500 hover:text-red-400"
+                    className="text-[var(--text-tag)] hover:text-[var(--alm-p1)]"
                     title={`delete "${name}"`}
                   >
                     ✕
@@ -479,11 +479,11 @@ export default function OpcuaSettingsModal({
         )}
 
         {/* Save row */}
-        <div className="mb-2 flex items-center gap-2 border-t border-neutral-800 pt-3">
+        <div className="mb-2 flex items-center gap-2 border-t border-[var(--hmi-rule)] pt-3">
           <button
             onClick={handleSave}
             disabled={locked}
-            className="rounded border border-neutral-700 bg-neutral-800 px-3 py-1 hover:bg-neutral-700 disabled:opacity-50"
+            className="rounded border border-[var(--hmi-rule-strong)] bg-[var(--btn-face)] px-3 py-1 hover:bg-[var(--btn-face-hover)] disabled:opacity-50"
             title="Save these settings without connecting yet"
           >
             Save
@@ -498,27 +498,27 @@ export default function OpcuaSettingsModal({
           <button
             onClick={handleSaveAsProfile}
             disabled={locked || !newProfileName.trim()}
-            className="rounded border border-neutral-700 bg-neutral-800 px-3 py-1 hover:bg-neutral-700 disabled:opacity-50"
+            className="rounded border border-[var(--hmi-rule-strong)] bg-[var(--btn-face)] px-3 py-1 hover:bg-[var(--btn-face-hover)] disabled:opacity-50"
           >
             Save as…
           </button>
         </div>
 
         {/* Advanced */}
-        <details open={advancedOpen} className="mt-2 border-t border-neutral-800 pt-2">
+        <details open={advancedOpen} className="mt-2 border-t border-[var(--hmi-rule)] pt-2">
           <summary
             onClick={(e) => {
               e.preventDefault();
               setAdvancedOpen((v) => !v);
             }}
-            className="cursor-pointer text-xs text-neutral-500 hover:text-neutral-300"
+            className="cursor-pointer text-xs text-[var(--text-tag)] hover:text-[var(--text-label)]"
           >
             {advancedOpen ? '▾' : '▸'} Advanced — how tags are found (default: automatic, nothing to
             set)
           </summary>
 
           <div className="mt-3 grid grid-cols-[120px_1fr] items-center gap-2">
-            <label className="text-neutral-400">Find tags by</label>
+            <label className="text-[var(--text-tag)]">Find tags by</label>
             <select
               value={addressing}
               onChange={(e) => setAddressing(e.target.value as 'auto' | 'browse' | 'node_id')}
@@ -531,7 +531,7 @@ export default function OpcuaSettingsModal({
             </select>
 
             {addressing === 'auto' && (
-              <div className="col-span-2 text-xs text-neutral-600">
+              <div className="col-span-2 text-xs text-[var(--text-disabled)]">
                 The app finds its tags by name anywhere on the PLC — nothing to set here. Only switch
                 modes if the PLC exposes its tags somewhere Automatic can't reach.
               </div>
@@ -539,7 +539,7 @@ export default function OpcuaSettingsModal({
 
             {addressing === 'browse' && (
               <>
-            <label className="text-neutral-400">Tag list name</label>
+            <label className="text-[var(--text-tag)]">Tag list name</label>
             <input
               value={browsePath}
               onChange={(e) => setBrowsePath(e.target.value)}
@@ -548,31 +548,31 @@ export default function OpcuaSettingsModal({
               className={field}
             />
             <div />
-            <div className="text-xs text-neutral-600">
+            <div className="text-xs text-[var(--text-disabled)]">
               The Global Variable List your tags live in. Default GVL_PLC works for most projects.
               Not sure? Use Discover below.
             </div>
 
-            <label className="text-neutral-400">Discover</label>
+            <label className="text-[var(--text-tag)]">Discover</label>
             <div>
               <button
                 onClick={() => (discOpen ? setDiscOpen(false) : (setDiscOpen(true), runDiscover([])))}
                 disabled={locked || !effectiveEndpoint}
-                className="rounded border border-neutral-700 bg-neutral-800 px-2 py-1 text-xs hover:bg-neutral-700 disabled:opacity-50"
+                className="rounded border border-[var(--hmi-rule-strong)] bg-[var(--btn-face)] px-2 py-1 text-xs hover:bg-[var(--btn-face-hover)] disabled:opacity-50"
               >
                 {discOpen ? 'Hide' : 'Browse the PLC to find it'}
               </button>
             </div>
 
             {discOpen && (
-              <div className="col-span-2 rounded border border-neutral-700 bg-neutral-950 p-2 text-xs">
-                {discBusy && <div className="text-neutral-500">browsing…</div>}
-                {discError && <div className="text-red-400">{discError}</div>}
+              <div className="col-span-2 rounded border border-[var(--hmi-rule-strong)] bg-[var(--hmi-chrome)] p-2 text-xs">
+                {discBusy && <div className="text-[var(--text-tag)]">browsing…</div>}
+                {discError && <div className="text-[var(--alm-p1)]">{discError}</div>}
                 {!discBusy && !discError && (
                   <>
                     <div className="mb-1 flex items-center justify-between">
-                      <div className="flex flex-wrap items-center gap-1 text-neutral-500">
-                        <button onClick={() => runDiscover([])} className="hover:text-neutral-200">
+                      <div className="flex flex-wrap items-center gap-1 text-[var(--text-tag)]">
+                        <button onClick={() => runDiscover([])} className="hover:text-[var(--text-value)]">
                           top
                         </button>
                         {discPath.map((seg, i) => (
@@ -580,7 +580,7 @@ export default function OpcuaSettingsModal({
                             <span>/</span>
                             <button
                               onClick={() => runDiscover(discPath.slice(0, i + 1))}
-                              className="hover:text-neutral-200"
+                              className="hover:text-[var(--text-value)]"
                             >
                               {seg}
                             </button>
@@ -590,15 +590,15 @@ export default function OpcuaSettingsModal({
                       {discPath.length > 0 && (
                         <button
                           onClick={useDiscoveredPath}
-                          className="rounded border border-emerald-700 bg-emerald-950/40 px-1.5 py-0.5 text-emerald-300 hover:bg-emerald-950/70"
+                          className="rounded border border-[var(--hmi-rule-strong)] bg-[var(--hmi-surface)] px-1.5 py-0.5 text-[var(--text-value)] hover:bg-[var(--hmi-surface)]"
                         >
                           Use this
                         </button>
                       )}
                     </div>
-                    <div className="max-h-40 overflow-y-auto rounded border border-neutral-800">
+                    <div className="max-h-40 overflow-y-auto rounded border border-[var(--hmi-rule)]">
                       {discChildren.length === 0 && (
-                        <div className="px-2 py-1 text-neutral-600">nothing here</div>
+                        <div className="px-2 py-1 text-[var(--text-disabled)]">nothing here</div>
                       )}
                       {discChildren.map((child) => (
                         <button
@@ -607,13 +607,13 @@ export default function OpcuaSettingsModal({
                             !child.is_variable && runDiscover([...discPath, child.browse_name])
                           }
                           disabled={child.is_variable}
-                          className="flex w-full items-center justify-between border-b border-neutral-900 px-2 py-1 text-left last:border-0 hover:bg-neutral-800 disabled:hover:bg-transparent"
+                          className="flex w-full items-center justify-between border-b border-[var(--hmi-rule)] px-2 py-1 text-left last:border-0 hover:bg-[var(--btn-face)] disabled:hover:bg-transparent"
                         >
-                          <span className={child.is_variable ? 'text-neutral-500' : 'text-neutral-200'}>
+                          <span className={child.is_variable ? 'text-[var(--text-tag)]' : 'text-[var(--text-value)]'}>
                             {child.is_variable ? '' : '▸ '}
                             {child.display_name}
                           </span>
-                          {child.is_variable && <span className="text-neutral-600">tag</span>}
+                          {child.is_variable && <span className="text-[var(--text-disabled)]">tag</span>}
                         </button>
                       ))}
                     </div>
@@ -622,7 +622,7 @@ export default function OpcuaSettingsModal({
               </div>
             )}
 
-                <label className="text-neutral-400">Namespace URI</label>
+                <label className="text-[var(--text-tag)]">Namespace URI</label>
                 <input
                   value={namespaceUri}
                   onChange={(e) => setNamespaceUri(e.target.value)}
@@ -635,7 +635,7 @@ export default function OpcuaSettingsModal({
 
             {addressing === 'node_id' && (
               <>
-                <label className="text-neutral-400">Namespace URI</label>
+                <label className="text-[var(--text-tag)]">Namespace URI</label>
                 <input
                   value={namespaceUri}
                   onChange={(e) => setNamespaceUri(e.target.value)}
@@ -643,7 +643,7 @@ export default function OpcuaSettingsModal({
                   placeholder="urn:symbolset:Device:Application:Symbol Set"
                   className={field}
                 />
-                <label className="text-neutral-400">Node ID pattern</label>
+                <label className="text-[var(--text-tag)]">Node ID pattern</label>
                 <input
                   value={nodeIdPattern}
                   onChange={(e) => setNodeIdPattern(e.target.value)}
@@ -654,7 +654,7 @@ export default function OpcuaSettingsModal({
               </>
             )}
 
-            <label className="text-neutral-400">Watchdog (s)</label>
+            <label className="text-[var(--text-tag)]">Watchdog (s)</label>
             <input
               type="number"
               step="0.1"

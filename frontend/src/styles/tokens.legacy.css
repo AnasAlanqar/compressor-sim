@@ -1,0 +1,69 @@
+/* Frozen snapshot of the pre-restyle ("dashboard") palette, captured
+   2026-08-18 before the ISA-101 restyle (see hmi-baseline-20260818).
+   Only PidDiagramLegacy.tsx / AppShellLegacy.tsx / lib/pidLegacy.ts read
+   these — every other component reads tokens.css. This file exists so
+   Ctrl+Shift+L can flip back to literally the old look for comparison. */
+
+[data-theme="legacy"] {
+  --hmi-canvas:          #0d1117;
+  --hmi-surface:         #0a0e14;
+  --hmi-surface-sunken:  #161b22;
+  --hmi-chrome:          #0a0a0a;
+
+  --hmi-rule:            #262626;
+  --hmi-rule-strong:     #404040;
+
+  --pipe-major:          #4b5563;
+  --pipe-minor:          #4b5563;
+  --pipe-signal:         #2f3846;
+  --equip-stroke:        #4b5563;
+  --equip-stroke-idle:   #262b33;
+  --equip-fill:          #1c2128;
+  --equip-fill-active:   #161b22;
+  --equip-hatch:         #6b7280;
+
+  --text-value:          #e5e5e5;
+  --text-label:          #d4d4d4;
+  --text-tag:            #737373;
+  --text-disabled:       #525252;
+
+  --alm-p1:              #ef4444;
+  --alm-p1-on:           #ffffff;
+  --alm-p2:              #f59e0b;
+  --alm-p2-on:           #141414;
+  --alm-p3:              #f59e0b;
+  --alm-p3-on:           #141414;
+  --alm-trip:            #ef4444;
+  --alm-trip-on:         #ffffff;
+  --alm-unack-ring:      #ffffff;
+
+  --focus-ring:          #10b981;
+  --select-ring:         #10b981;
+  --btn-face:            #262626;
+  --btn-face-hover:      #404040;
+  --btn-face-active:     #171717;
+
+  /* legacy shapes were never on a grid, and radii/weights varied per
+     element (rx 9-38, stroke 1-3.4) — these are the closest fixed
+     approximation, real values stay hardcoded in *Legacy.tsx. */
+  --w-pipe-major: 11px;
+  --w-pipe-minor: 8px;
+  --w-signal:     1.4px;
+  --w-equip:      3.4px;
+  --w-hairline:   1px;
+  --radius:       12px;
+  --radius-btn:   4px;
+  --unit:         1px;
+
+  --font-label: ui-sans-serif, system-ui, sans-serif;
+  --font-value: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  --font-prose: ui-sans-serif, system-ui, sans-serif;
+
+  /* legacy-only: the running/open/connected state color the new theme
+     deliberately removes (§7 of the restyle spec). */
+  --legacy-state-good:   #10b981;
+  --legacy-state-warn:   #f59e0b;
+  --legacy-state-bad:    #ef4444;
+  --legacy-accent-p:     #38bdf8;
+  --legacy-accent-t:     #a78bfa;
+}

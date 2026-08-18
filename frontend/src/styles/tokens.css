@@ -1,0 +1,97 @@
+/* ISA-101 design tokens. Every color, line weight, radius, spacing value,
+   and font size in the app must come from here (or tokens.legacy.css for
+   the frozen pre-restyle theme). See ../../THEME.md. */
+
+:root, [data-theme="light"] {
+  /* ---- Surfaces ---------------------------------------------------- */
+  --hmi-canvas:          #C6C6C6;
+  --hmi-surface:         #D2D2D2;
+  --hmi-surface-sunken:  #BABABA;
+  --hmi-chrome:          #B4B4B4;
+
+  /* ---- Rules & borders --------------------------------------------- */
+  --hmi-rule:            #A0A0A0;
+  --hmi-rule-strong:     #7A7A7A;
+
+  /* ---- Process (the P&ID itself) ----------------------------------- */
+  --pipe-major:          #5E5E5E;
+  --pipe-minor:          #7E7E7E;
+  --pipe-signal:         #949494;
+  --equip-stroke:        #3C3C3C;
+  --equip-stroke-idle:   #808080;
+  --equip-fill:          #DCDCDC;
+  --equip-fill-active:   #B0B0B0;
+  --equip-hatch:         #ACACAC;
+
+  /* ---- Text --------------------------------------------------------- */
+  --text-value:          #141414;
+  --text-label:          #3A3A3A;
+  --text-tag:            #6A6A6A;
+  --text-disabled:       #909090;
+
+  /* ---- Alarm priorities (ISA-101) ---------------------------------- */
+  --alm-p1:              #B4232A;
+  --alm-p1-on:           #FFFFFF;
+  --alm-p2:              #D07800;
+  --alm-p2-on:           #FFFFFF;
+  --alm-p3:              #E0C400;
+  --alm-p3-on:           #141414;
+  --alm-trip:            #9B2BA8;
+  --alm-trip-on:         #FFFFFF;
+  --alm-unack-ring:      #FFFFFF;
+
+  /* ---- Interaction -------------------------------------------------- */
+  --focus-ring:          #1F5FBF;
+  --select-ring:         #1F5FBF;
+  --btn-face:            #D2D2D2;
+  --btn-face-hover:      #DCDCDC;
+  --btn-face-active:     #B4B4B4;
+
+  /* ---- Geometry ----------------------------------------------------- */
+  --w-pipe-major: 4px;
+  --w-pipe-minor: 2px;
+  --w-signal:     1px;
+  --w-equip:      1.5px;
+  --w-hairline:   0.5px;
+  --radius:       0px;
+  --radius-btn:   2px;
+  --unit:         4px;
+
+  /* ---- Typography ----------------------------------------------------
+     Phase 2 populates the font faces/scale; declared here so Phase 1's
+     "everything comes from tokens.css" grep is honest about scope. ---- */
+  --font-label: 'IBM Plex Sans Condensed', 'Roboto Condensed', 'Barlow Condensed', system-ui;
+  --font-value: 'IBM Plex Mono', 'JetBrains Mono', ui-monospace, monospace;
+  --font-prose: 'IBM Plex Sans', system-ui;
+}
+
+[data-theme="dark"] {
+  --hmi-canvas:          #14171A;
+  --hmi-surface:         #1B1F23;
+  --hmi-surface-sunken:  #101316;
+  --hmi-chrome:          #1E2328;
+  --hmi-rule:            #2C3136;
+  --hmi-rule-strong:     #3D444D;
+  --pipe-major:          #5C656E;
+  --pipe-minor:          #454D55;
+  --pipe-signal:         #3D444D;
+  --equip-stroke:        #8B949E;
+  --equip-stroke-idle:   #4A5158;
+  --equip-fill:          #1E2328;
+  --equip-fill-active:   #2C3136;
+  --equip-hatch:         #333A40;
+  --text-value:          #E6EDF3;
+  --text-label:          #C9D1D9;
+  --text-tag:            #6E7681;
+  --text-disabled:       #4A5158;
+  --alm-p1:              #CF3C3C;
+  --alm-p2:              #D29922;
+  --alm-p3:              #C9B227;
+  --alm-p3-on:           #141414;
+  --alm-trip:            #B656C4;
+  --focus-ring:          #388BFD;
+  --select-ring:         #388BFD;
+  --btn-face:            #22272B;
+  --btn-face-hover:      #2C3136;
+  --btn-face-active:     #1B1F23;
+}

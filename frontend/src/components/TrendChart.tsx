@@ -3,6 +3,7 @@ import uPlot from 'uplot';
 import 'uplot/dist/uPlot.min.css';
 import type { SimMessage, UseSimState } from '../hooks/useSimState';
 import type { AlarmTable } from '../lib/pid';
+import { CHART_PEN_COLORS, cssVar } from '../lib/chartPalette';
 
 // APP_SPEC.md section 6.3: up to 12 selectable pens, 30-minute rolling
 // window, uPlot only (hard requirement — it's the one chart library that
@@ -19,18 +20,18 @@ interface PenDef {
 }
 
 const AVAILABLE_PENS: PenDef[] = [
-  { key: 'PT_1001', label: 'Suction', color: '#38bdf8', unit: 'psig' },
-  { key: 'PT_1002', label: 'ST1 discharge', color: '#818cf8', unit: 'psig' },
-  { key: 'PT_1003', label: 'ST2 discharge', color: '#a78bfa', unit: 'psig' },
-  { key: 'PT_1006', label: 'Final discharge', color: '#f472b6', unit: 'psig' },
-  { key: 'TT_2004', label: 'Cyl 1 temp', color: '#fb923c', unit: '°F' },
-  { key: 'TT_2005', label: 'Cyl 2 temp', color: '#f59e0b', unit: '°F' },
-  { key: 'ST_1008', label: 'Engine speed', color: '#34d399', unit: 'rpm' },
-  { key: 'valves.Z_byp', label: 'Bypass position', color: '#10b981', unit: '%' },
-  { key: 'PT_1005', label: 'Oil pressure', color: '#60a5fa', unit: 'psig' },
-  { key: 'TT_2001', label: 'Oil temp', color: '#f87171', unit: '°F' },
-  { key: 'TT_2013', label: 'Aftercooler temp', color: '#fbbf24', unit: '°F' },
-  { key: 'flows.m_comp', label: 'Mass flow', color: '#c084fc', unit: 'kg/s' },
+  { key: 'PT_1001', label: 'Suction', color: CHART_PEN_COLORS.PT_1001, unit: 'psig' },
+  { key: 'PT_1002', label: 'ST1 discharge', color: CHART_PEN_COLORS.PT_1002, unit: 'psig' },
+  { key: 'PT_1003', label: 'ST2 discharge', color: CHART_PEN_COLORS.PT_1003, unit: 'psig' },
+  { key: 'PT_1006', label: 'Final discharge', color: CHART_PEN_COLORS.PT_1006, unit: 'psig' },
+  { key: 'TT_2004', label: 'Cyl 1 temp', color: CHART_PEN_COLORS.TT_2004, unit: '°F' },
+  { key: 'TT_2005', label: 'Cyl 2 temp', color: CHART_PEN_COLORS.TT_2005, unit: '°F' },
+  { key: 'ST_1008', label: 'Engine speed', color: CHART_PEN_COLORS.ST_1008, unit: 'rpm' },
+  { key: 'valves.Z_byp', label: 'Bypass position', color: CHART_PEN_COLORS['valves.Z_byp'], unit: '%' },
+  { key: 'PT_1005', label: 'Oil pressure', color: CHART_PEN_COLORS.PT_1005, unit: 'psig' },
+  { key: 'TT_2001', label: 'Oil temp', color: CHART_PEN_COLORS.TT_2001, unit: '°F' },
+  { key: 'TT_2013', label: 'Aftercooler temp', color: CHART_PEN_COLORS.TT_2013, unit: '°F' },
+  { key: 'flows.m_comp', label: 'Mass flow', color: CHART_PEN_COLORS['flows.m_comp'], unit: 'kg/s' },
 ];
 
 const DEFAULT_KEYS = [
@@ -94,8 +95,12 @@ export default function TrendChart({ subscribe, alarms }: { subscribe: UseSimSta
         })),
       ],
       axes: [
-        { stroke: '#6b7280', grid: { stroke: '#1f2937' }, values: (_u, vals) => vals.map((v) => `${v.toFixed(0)}s`) },
-        { stroke: '#6b7280', grid: { stroke: '#1f2937' } },
+        {
+          stroke: cssVar('--text-tag'),
+          grid: { stroke: cssVar('--hmi-rule') },
+          values: (_u, vals) => vals.map((v) => `${v.toFixed(0)}s`),
+        },
+        { stroke: cssVar('--text-tag'), grid: { stroke: cssVar('--hmi-rule') } },
       ],
       hooks: {
         draw: [
@@ -103,7 +108,7 @@ export default function TrendChart({ subscribe, alarms }: { subscribe: UseSimSta
             // alarm/trip setpoints as horizontal dashed lines — section 6.3
             const ctx = u.ctx;
             ctx.save();
-            ctx.strokeStyle = '#ef4444';
+            ctx.strokeStyle = cssVar('--alm-p1');
             ctx.setLineDash([4, 4]);
             ctx.lineWidth = 1;
             pens.forEach((pen) => {
@@ -164,19 +169,19 @@ export default function TrendChart({ subscribe, alarms }: { subscribe: UseSimSta
       <div ref={containerRef} className="w-full" />
       <div className="grid grid-cols-2 gap-1 text-xs sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
         {AVAILABLE_PENS.map((pen) => (
-          <label key={pen.key} className="flex items-center gap-1.5 text-neutral-400">
+          <label key={pen.key} className="flex items-center gap-1.5 text-[var(--text-tag)]">
             <input
               type="checkbox"
               checked={selected.includes(pen.key)}
               onChange={() => togglePen(pen.key)}
-              className="accent-emerald-600"
+              className="accent-[var(--focus-ring)]"
             />
             <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: pen.color }} />
             {pen.label}
           </label>
         ))}
       </div>
-      <div className="text-xs text-neutral-600">{selected.length}/12 pens &middot; 30-min rolling window</div>
+      <div className="text-xs text-[var(--text-disabled)]">{selected.length}/12 pens &middot; 30-min rolling window</div>
     </div>
   );
 }

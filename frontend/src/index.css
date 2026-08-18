@@ -1,12 +1,38 @@
+@import './styles/tokens.css';
+@import './styles/tokens.legacy.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 body {
-  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-prose);
+  background-color: var(--hmi-canvas);
 }
 
 .tabular {
-  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-family: var(--font-value);
   font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1, 'zero' 1;
+}
+
+/* Shared chrome control — toolbar buttons, selects. Phase 8 adds the
+   focus-visible ring; kept here (not per-instance) so every control in
+   the new shell stays visually identical without repeating the rule. */
+.hmi-btn {
+  border: var(--w-hairline) solid var(--hmi-rule-strong);
+  border-radius: var(--radius-btn);
+  background-color: var(--btn-face);
+  color: var(--text-value);
+  padding: 0.25rem 0.75rem;
+  font-size: 0.875rem;
+}
+.hmi-btn:hover {
+  background-color: var(--btn-face-hover);
+}
+.hmi-btn:active {
+  background-color: var(--btn-face-active);
+}
+.hmi-btn:disabled {
+  opacity: 0.5;
 }

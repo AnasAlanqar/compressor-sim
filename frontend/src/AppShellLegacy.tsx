@@ -1,20 +1,26 @@
 import { useEffect, useState } from 'react';
 import { useSimState } from './hooks/useSimState';
-import { useTheme } from './hooks/useTheme';
-import AppShellLegacy from './AppShellLegacy';
 import FaultPanel from './components/FaultPanel';
 import ManualOverridePanel from './components/ManualOverridePanel';
 import OpcuaSettingsModal from './components/OpcuaSettingsModal';
-import PidDiagram from './components/PidDiagram';
+import PidDiagramLegacy from './components/PidDiagramLegacy';
 import Tabs from './components/Tabs';
 import TagTable from './components/TagTable';
 import TrendChart from './components/TrendChart';
 import type { AlarmTable } from './lib/pid';
 
+// Frozen snapshot of the pre-restyle app shell, captured 2026-08-18
+// (hmi-baseline-20260818) so Ctrl+Shift+L has a true old-app comparison.
+// Do not edit to match new features — extend AppShellNew.tsx instead.
+
 function StatusDot({ status }: { status: string }) {
   const color =
-    status === 'connected' ? 'var(--text-value)' : status === 'connecting' ? 'var(--alm-p3)' : 'var(--alm-p2)';
-  return <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />;
+    status === 'connected'
+      ? 'bg-emerald-500'
+      : status === 'connecting'
+        ? 'bg-amber-500'
+        : 'bg-red-500';
+  return <span className={`inline-block h-2.5 w-2.5 rounded-full ${color}`} />;
 }
 
 // The four headline numbers — the "read it from across the room" summary.
@@ -23,23 +29,16 @@ function StatusDot({ status }: { status: string }) {
 function Readout({ label, value, unit, alarm }: { label: string; value: string; unit: string; alarm?: boolean }) {
   return (
     <div className="flex flex-col items-start">
-      <span className="text-xs uppercase tracking-widest" style={{ color: 'var(--text-tag)' }}>{label}</span>
-      <span
-        className="tabular text-5xl font-semibold leading-tight"
-        style={{ color: alarm ? 'var(--alm-p1)' : 'var(--text-value)' }}
-      >
+      <span className="text-xs uppercase tracking-widest text-neutral-500">{label}</span>
+      <span className={`tabular text-5xl font-semibold leading-tight ${alarm ? 'text-red-400' : 'text-neutral-50'}`}>
         {value}
-        <span className="ml-1.5 text-base font-normal" style={{ color: 'var(--text-tag)' }}>{unit}</span>
+        <span className="ml-1.5 text-base font-normal text-neutral-500">{unit}</span>
       </span>
     </div>
   );
 }
 
-// New (ISA-101) shell. Currently still the pre-Phase-6 layout, retokenized —
-// Phase 6 replaces the JSX below with the titlebar/alarm-banner/dock
-// restructure while AppShellLegacy.tsx (a frozen copy) stays untouched, so
-// Ctrl+Shift+L keeps comparing against the true pre-restyle app throughout.
-function AppShellNew() {
+export default function AppShellLegacy() {
   const {
     status, tags, flows, valves, cmdEcho, boundary, simInsight, opcua, simTime, running,
     sendCmd, sendRun, sendRaw, subscribe,
@@ -87,82 +86,78 @@ function AppShellNew() {
   const opcConnected = opcua.connected;
 
   return (
-    <div
-      className="flex h-screen flex-col overflow-hidden"
-      style={{ backgroundColor: 'var(--hmi-canvas)', color: 'var(--text-value)' }}
-    >
-      <header
-        className="flex flex-wrap items-center gap-4 px-4 py-2"
-        style={{
-          borderBottom: 'var(--w-hairline) solid var(--hmi-rule)',
-          backgroundColor: 'var(--hmi-chrome)',
-        }}
-      >
+    <div className="flex h-screen flex-col overflow-hidden bg-panel text-neutral-200">
+      <header className="flex flex-wrap items-center gap-4 border-b border-neutral-800 bg-neutral-950 px-4 py-2">
         <div className="flex items-center gap-2 text-sm">
           <StatusDot status={status} />
-          <span style={{ color: 'var(--text-tag)' }}>{status}</span>
+          <span className="text-neutral-400">{status}</span>
         </div>
-        <div className="tabular text-sm" style={{ color: 'var(--text-tag)' }}>sim t={simTime.toFixed(1)}s</div>
-        <button onClick={() => sendRun(!running)} className="hmi-btn">
+        <div className="tabular text-sm text-neutral-400">sim t={simTime.toFixed(1)}s</div>
+        <button
+          onClick={() => sendRun(!running)}
+          className="rounded border border-neutral-700 bg-neutral-800 px-3 py-1 text-sm hover:bg-neutral-700"
+        >
           {running ? 'Pause' : 'Run'}
         </button>
         <div className="flex items-center gap-2">
           <select
             value={resetMode}
             onChange={(e) => setResetMode(e.target.value as 'blown_down' | 'pressurised')}
-            className="hmi-btn"
+            className="rounded border border-neutral-700 bg-neutral-800 px-2 py-1 text-sm"
           >
             <option value="blown_down">Reset — blown down</option>
             <option value="pressurised">Reset — pressurised</option>
           </select>
-          <button onClick={doReset} className="hmi-btn">
+          <button
+            onClick={doReset}
+            className="rounded border border-neutral-700 bg-neutral-800 px-3 py-1 text-sm hover:bg-neutral-700"
+          >
             Reset
           </button>
         </div>
         <div className="flex items-center gap-2 text-sm">
-          <span
-            className="h-2 w-2"
-            style={{ backgroundColor: opcConnected ? 'var(--text-value)' : 'var(--hmi-surface-sunken)' }}
-          />
-          <span className="max-w-[16rem] truncate text-xs" style={{ color: 'var(--text-tag)' }} title={opcEndpoint}>
+          <span className={`h-2 w-2 rounded-full ${opcConnected ? 'bg-emerald-500' : 'bg-neutral-600'}`} />
+          <span className="max-w-[16rem] truncate text-xs text-neutral-400" title={opcEndpoint}>
             {opcEndpoint || 'no endpoint configured'}
           </span>
           <button
             onClick={() => setOpcSettingsOpen(true)}
             title="OPC UA connection settings"
-            className="hmi-btn text-xs"
+            className="rounded border border-neutral-700 bg-neutral-800 px-2 py-1 text-xs hover:bg-neutral-700"
           >
             ⚙
           </button>
           {opcConnected ? (
-            <button onClick={doOpcDisconnect} disabled={opcBusy} className="hmi-btn disabled:opacity-50">
+            <button
+              onClick={doOpcDisconnect}
+              disabled={opcBusy}
+              className="rounded border border-neutral-700 bg-neutral-800 px-3 py-1 text-sm hover:bg-neutral-700 disabled:opacity-50"
+            >
               Disconnect
             </button>
           ) : (
-            <button onClick={doOpcConnect} disabled={opcBusy} className="hmi-btn disabled:opacity-50">
+            <button
+              onClick={doOpcConnect}
+              disabled={opcBusy}
+              className="rounded border border-neutral-700 bg-neutral-800 px-3 py-1 text-sm hover:bg-neutral-700 disabled:opacity-50"
+            >
               Connect
             </button>
           )}
           {opcConnected && opcua.watchdog_ok === false && (
-            <span className="text-xs" style={{ color: 'var(--alm-p1)' }}>watchdog stale</span>
+            <span className="text-xs text-red-400">watchdog stale</span>
           )}
-          {opcua.error && <span className="text-xs" style={{ color: 'var(--alm-p1)' }}>{opcua.error}</span>}
+          {opcua.error && <span className="text-xs text-red-400">{opcua.error}</span>}
         </div>
-        <span className="ml-auto text-xs" style={{ color: 'var(--text-disabled)' }}>compressor-sim</span>
+        <span className="ml-auto text-xs text-neutral-600">compressor-sim</span>
       </header>
 
       <main className="grid min-h-0 flex-1 grid-rows-[minmax(420px,3fr)_minmax(260px,2fr)] gap-4 overflow-y-auto p-4">
-        <div
-          className="flex min-h-[420px] flex-col overflow-hidden p-3"
-          style={{ border: 'var(--w-hairline) solid var(--hmi-rule)', backgroundColor: 'var(--hmi-surface)' }}
-        >
-          <PidDiagram tags={tags} flows={flows} valves={valves} alarms={alarms} cmdEcho={cmdEcho} simInsight={simInsight} />
+        <div className="flex min-h-[420px] flex-col overflow-hidden rounded border border-neutral-800 bg-neutral-900/60 p-3">
+          <PidDiagramLegacy tags={tags} flows={flows} valves={valves} alarms={alarms} cmdEcho={cmdEcho} simInsight={simInsight} />
         </div>
 
-        <div
-          className="flex min-h-[260px] flex-col overflow-hidden p-3"
-          style={{ border: 'var(--w-hairline) solid var(--hmi-rule)', backgroundColor: 'var(--hmi-surface)' }}
-        >
+        <div className="flex min-h-[260px] flex-col overflow-hidden rounded border border-neutral-800 bg-neutral-900/60 p-3">
           <Tabs
             tabs={[
               {
@@ -185,10 +180,7 @@ function AppShellNew() {
         </div>
       </main>
 
-      <footer
-        className="flex flex-wrap items-center gap-x-12 gap-y-2 px-6 py-4"
-        style={{ borderTop: 'var(--w-hairline) solid var(--hmi-rule)', backgroundColor: 'var(--hmi-chrome)' }}
-      >
+      <footer className="flex flex-wrap items-center gap-x-12 gap-y-2 border-t border-neutral-800 bg-neutral-950 px-6 py-4">
         <Readout label="Suction" value={num('PT_1001').toFixed(1)} unit="psig" />
         <Readout label="Final discharge" value={num('PT_1006').toFixed(0)} unit="psig" />
         <Readout label="Speed" value={num('ST_1008').toFixed(0)} unit="rpm" />
@@ -204,9 +196,4 @@ function AppShellNew() {
       )}
     </div>
   );
-}
-
-export default function App() {
-  const [theme] = useTheme();
-  return theme === 'legacy' ? <AppShellLegacy /> : <AppShellNew />;
 }
