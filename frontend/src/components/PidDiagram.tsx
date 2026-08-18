@@ -9,6 +9,8 @@ import GateValve from './symbols/GateValve';
 import ControlValve from './symbols/ControlValve';
 import BlowdownValve from './symbols/BlowdownValve';
 import GasEngine from './symbols/GasEngine';
+import MovingAnalogIndicator from './symbols/MovingAnalogIndicator';
+import type { AlarmBand } from '../lib/pid';
 
 // ISA-101: normal state carries no color at all. Alarm state is the only
 // thing color communicates — see tokens.css §"Alarm priorities" and
@@ -139,154 +141,83 @@ function Pipe({ x1, y1, x2, y2, flow }: { x1: number; y1: number; x2: number; y2
   );
 }
 
-// P vs T get a fixed identity, independent of alarm state, so the two
-// quantities are visually distinguishable regardless of alarm — both read
-// as --text-tag now (§7: normal state carries no color); only the kind
-// letter's weight/position, not hue, tells P from T.
-const KIND_ACCENT: Record<'P' | 'T', string> = { P: 'var(--text-tag)', T: 'var(--text-tag)' };
-
-interface ReadingSpec {
-  kind: 'P' | 'T';
-  value: string;
-  unit: string;
-  /** Real tag id ("PT_1001") for instrumented readings; ignored (replaced
-   * by "sim") when simOnly is set. */
-  tag: string;
-  state: GaugeState;
-  /** No corresponding transmitter on the real unit (section 4's I/O list
-   * has no interstage TTs) — a model-internal value shown as insight only,
-   * rendered dimmer with a dashed, unfilled kind chip and no tag number. */
-  simOnly?: boolean;
-}
-
 // Word appended after the unit when a reading is out of its normal band —
 // alongside the colour change, so alarm/trip reads without relying on
 // colour perception. Normal readings stay calm (no extra word).
 const STATE_WORD: Record<GaugeState, string | null> = { normal: null, amber: 'ALARM', red: 'TRIP' };
 
-function ReadingRow({ y, width, kind, value, unit, tag, state, simOnly }: ReadingSpec & { y: number; width: number }) {
-  const accent = KIND_ACCENT[kind];
+interface ReadingSpec {
+  value: string;
+  unit: string;
+  /** Real tag id ("PT_1001") for instrumented readings; empty (rendered as
+   * "SIM") when simOnly is set. */
+  tag: string;
+  state: GaugeState;
+  band?: AlarmBand;
+  /** No corresponding transmitter on the real unit (section 4's I/O list
+   * has no interstage TTs) — a model-internal value shown as insight only,
+   * dimmer, italic, no MAI (no configured limits to show). */
+  simOnly?: boolean;
+}
+
+// §5/§8: no border, no background, no card — sits directly on the canvas,
+// right-aligned, tag on top, value+unit below, a Moving Analog Indicator
+// (§8, "the single highest-value addition") under that when limits exist.
+const READOUT_ROW_H = 46;
+function AnchoredReadout({ x, y, value, unit, tag, state, band, simOnly }: ReadingSpec & { x: number; y: number }) {
   const valueColor = simOnly ? 'var(--text-disabled)' : STATE_TOKEN[state];
-  const chipX = -width / 2 + 28;
   const stateWord = simOnly ? null : STATE_WORD[state];
   return (
-    <g>
-      <circle
-        cx={chipX}
-        cy={y}
-        r={17}
-        fill={accent}
-        fillOpacity={simOnly ? 0 : 0.22}
-        stroke={accent}
-        strokeWidth={2.4}
-        strokeDasharray={simOnly ? '3 3' : undefined}
-      />
-      <text x={chipX} y={y + 6.5} textAnchor="middle" fontSize={18} fontWeight={500} fill={accent}>
-        {kind}
+    <g transform={`translate(${x},${y})`}>
+      <text x={0} y={0} textAnchor="end" fontSize={11} fontStyle={simOnly ? 'italic' : 'normal'} fill="var(--text-tag)">
+        {simOnly ? 'SIM' : tag}
+        {stateWord ? ` — ${stateWord}` : ''}
       </text>
       <text
-        x={chipX + 34}
-        y={y + 9}
-        fontSize={32}
+        x={0}
+        y={20}
+        textAnchor="end"
+        fontSize={20}
         fontFamily="var(--font-value)"
         fill={valueColor}
         style={{ fontVariantNumeric: 'tabular-nums' }}
       >
         {value}
-        <tspan fontSize={17} fontFamily="var(--font-label)" fill="var(--text-tag)">
-          {' '}
-          {unit}
-        </tspan>
+        <tspan fontSize={11} fontFamily="var(--font-label)" fill="var(--text-tag)"> {unit}</tspan>
       </text>
-      <text
-        x={width / 2 - 16}
-        y={y - 15}
-        textAnchor="end"
-        fontSize={15}
-        fontStyle={simOnly ? 'italic' : 'normal'}
-        fill="var(--text-tag)"
-      >
-        {simOnly ? 'sim' : tag}
-      </text>
-      {stateWord && (
-        <text x={width / 2 - 16} y={y + 14} textAnchor="end" fontSize={14} fontWeight={500} letterSpacing={0.5} fill={valueColor}>
-          {stateWord}
-        </text>
-      )}
+      {!simOnly && band && <MovingAnalogIndicator x={-104} y={28} value={Number(value)} band={band} state={state} />}
     </g>
   );
 }
 
-// Card geometry shared between the layout math in PidDiagram (which needs
-// to know a card's height before it's drawn, to bottom-anchor it a fixed
-// distance above the process line) and the ReadoutCard renderer itself.
-const CARD_W = 300;
-const ROW_H = 74;
-const HEADER_H = 44;
-const CARD_PAD = 18;
-function cardHeight(rows: number) {
-  return HEADER_H + rows * ROW_H + CARD_PAD;
-}
-
-// Unified instrument card — every readout in the diagram (stage in/out
-// conditions, aftercooler, final discharge) uses this same shape and size
-// so P vs T and real-vs-simulator are the only things that visually vary;
-// everything else (border, alignment, tap-line style) stays consistent.
-function ReadoutCard({
-  x,
-  y,
-  tapX,
-  tapY,
-  title,
-  rows,
-}: {
-  x: number;
-  y: number;
-  tapX: number;
-  tapY: number;
-  title: string;
-  rows: ReadingSpec[];
-}) {
-  const w = CARD_W;
-  const h = cardHeight(rows.length);
+// One tap point can carry several readings (P, real T, sim-only T) —
+// stacked upward from a shared baseline with one leader line down to the
+// tap, instead of one card per reading.
+function ReadoutGroup({ x, tapX, tapY, baseY, rows }: { x: number; tapX: number; tapY: number; baseY: number; rows: ReadingSpec[] }) {
   return (
     <g>
-      <line x1={tapX} y1={tapY} x2={x} y2={y + h / 2} stroke="var(--pipe-signal)" strokeWidth="var(--w-signal)" strokeDasharray="3 3" />
-      <circle cx={tapX} cy={tapY} r={4} fill="var(--pipe-signal)" />
-      <g transform={`translate(${x},${y})`}>
-        <rect x={-w / 2} y={-h / 2} width={w} height={h} rx={12} fill="var(--hmi-surface)" stroke="var(--hmi-rule-strong)" strokeWidth={2} />
-        <text x={0} y={-h / 2 + 27} textAnchor="middle" fontSize={16.5} fontWeight={500} letterSpacing={0.5} fill="var(--text-label)">
-          {title}
-        </text>
-        {rows.map((r, i) => (
-          <ReadingRow key={i} y={-h / 2 + HEADER_H + ROW_H * i + ROW_H / 2 + 2} width={w} {...r} />
-        ))}
-      </g>
+      <line x1={tapX} y1={tapY} x2={x} y2={baseY + 6} stroke="var(--pipe-signal)" strokeWidth="var(--w-signal)" strokeDasharray="3 3" />
+      <circle cx={tapX} cy={tapY} r={2} fill="var(--pipe-signal)" />
+      {rows.map((r, i) => (
+        <AnchoredReadout key={i} x={x} y={baseY - (rows.length - 1 - i) * READOUT_ROW_H} {...r} />
+      ))}
     </g>
   );
 }
 
 // Legend for the P/T colour coding and the real-vs-simulator distinction —
 // tucked in the top-left corner, clear of the process line.
+// P/T no longer carry a color-coded chip (§7: normal state carries no
+// color) — the legend now only needs to explain the one remaining visual
+// distinction, real tag vs. model-only estimate.
 function Legend({ x, y }: { x: number; y: number }) {
-  const row = 26;
   return (
     <g transform={`translate(${x},${y})`}>
-      <circle cx={0} cy={0} r={10} fill={KIND_ACCENT.P} fillOpacity={0.22} stroke={KIND_ACCENT.P} strokeWidth={1.8} />
-      <text x={0} y={4.5} textAnchor="middle" fontSize={11} fontWeight={500} fill={KIND_ACCENT.P}>P</text>
-      <text x={17} y={5} fontSize={13.5} fill="var(--text-label)">pressure</text>
-
-      <circle cx={140} cy={0} r={10} fill={KIND_ACCENT.T} fillOpacity={0.22} stroke={KIND_ACCENT.T} strokeWidth={1.8} />
-      <text x={140} y={4.5} textAnchor="middle" fontSize={11} fontWeight={500} fill={KIND_ACCENT.T}>T</text>
-      <text x={157} y={5} fontSize={13.5} fill="var(--text-label)">temperature</text>
-
-      <circle cx={0} cy={row} r={10} fill="var(--text-tag)" fillOpacity={0.22} stroke="var(--text-tag)" strokeWidth={1.8} />
-      <text x={17} y={row + 5} fontSize={13.5} fill="var(--text-tag)">
-        solid + tag id — real PLC instrument
+      <text x={0} y={0} fontSize={11} fill="var(--text-tag)">
+        PT_/TT_ tag id — real PLC instrument
       </text>
-      <circle cx={0} cy={row * 2} r={10} fill="none" stroke="var(--text-tag)" strokeWidth={1.8} strokeDasharray="3 3" />
-      <text x={17} y={row * 2 + 5} fontSize={13.5} fontStyle="italic" fill="var(--text-tag)">
-        dashed + "sim" — no field TT, model estimate only
+      <text x={0} y={16} fontSize={11} fontStyle="italic" fill="var(--text-disabled)">
+        SIM — no field transmitter, model estimate only
       </text>
     </g>
   );
@@ -408,13 +339,10 @@ export default function PidDiagram({ tags, flows, valves, alarms, cmdEcho, simIn
   const xMid23 = (xCooler2 + xScrub3) / 2;
   const xOut3 = xCyl3 + 277;
 
-  // every card is bottom-anchored a fixed distance above the process line,
-  // so leader lines are the same length regardless of how many rows a card
-  // holds — only its top edge (and therefore its visual size) grows.
-  const CARD_GAP = 70;
-  const cardBottomY = AXIS_Y - CARD_GAP;
-  const cardY2 = cardBottomY - cardHeight(2) / 2;
-  const cardY3 = cardBottomY - cardHeight(3) / 2;
+  // Every readout group's bottom-most row sits a fixed distance above the
+  // process line — leader lines are always the same length; rows above it
+  // (a second/third reading on the same tap) stack upward from there.
+  const readoutBaseY = AXIS_Y - 84;
 
   // train boundary hugs the equipment (cylinders/coolers/scrubbers) only —
   // the label sits in a tab cut into the top border so the box reads as an
@@ -482,11 +410,11 @@ export default function PidDiagram({ tags, flows, valves, alarms, cmdEcho, simIn
       <Pipe x1={xSucCtrl + 46} y1={AXIS_Y} x2={xCyl1 - 72} y2={AXIS_Y} psig={P_s} flow={flows.m_comp} />
 
       {/* suction */}
-      <ReadoutCard
-        x={xIn1} y={cardY2} tapX={xIn1} tapY={AXIS_Y} title="SUCTION"
+      <ReadoutGroup
+        x={xIn1} tapX={xIn1} tapY={AXIS_Y} baseY={readoutBaseY}
         rows={[
-          { kind: 'P', value: formatTag('PT_1001', P_s).text, unit: formatTag('PT_1001', P_s).unit, tag: 'PT_1001', state: gs('PT_1001', P_s) },
-          { kind: 'T', value: formatValue('TT', T_suc).text, unit: formatValue('TT', T_suc).unit, tag: '', state: 'normal', simOnly: true },
+          { value: formatTag('PT_1001', P_s).text, unit: formatTag('PT_1001', P_s).unit, tag: 'PT_1001', state: gs('PT_1001', P_s), band: alarms['PT_1001'] },
+          { value: formatValue('TT', T_suc).text, unit: formatValue('TT', T_suc).unit, tag: '', state: 'normal', simOnly: true },
         ]}
       />
       <ReciprocatingCylinder x={xCyl1} y={AXIS_Y} label="ST1" rpm={rpm} />
@@ -494,12 +422,12 @@ export default function PidDiagram({ tags, flows, valves, alarms, cmdEcho, simIn
       <AirCooler x={xCooler1} y={AXIS_Y} label="Intercool. 1" fansOn={n_fans} />
       {/* PT_1002 sits on the pipe between ST1 and ST2 — one card serves both
           the ST1 discharge and ST2 suction reading, since it's one tap. */}
-      <ReadoutCard
-        x={xMid12} y={cardY3} tapX={xMid12} tapY={AXIS_Y} title="ST1 OUT / ST2 IN"
+      <ReadoutGroup
+        x={xMid12} tapX={xMid12} tapY={AXIS_Y} baseY={readoutBaseY}
         rows={[
-          { kind: 'P', value: formatTag('PT_1002', P_1).text, unit: formatTag('PT_1002', P_1).unit, tag: 'PT_1002', state: gs('PT_1002', P_1) },
-          { kind: 'T', value: formatTag('TT_2004', T_cyl1).text, unit: formatTag('TT_2004', T_cyl1).unit, tag: 'TT_2004', state: gs('TT_2004', T_cyl1) },
-          { kind: 'T', value: formatValue('TT', T_inter).text, unit: formatValue('TT', T_inter).unit, tag: '', state: 'normal', simOnly: true },
+          { value: formatTag('PT_1002', P_1).text, unit: formatTag('PT_1002', P_1).unit, tag: 'PT_1002', state: gs('PT_1002', P_1), band: alarms['PT_1002'] },
+          { value: formatTag('TT_2004', T_cyl1).text, unit: formatTag('TT_2004', T_cyl1).unit, tag: 'TT_2004', state: gs('TT_2004', T_cyl1), band: alarms['TT_2004'] },
+          { value: formatValue('TT', T_inter).text, unit: formatValue('TT', T_inter).unit, tag: '', state: 'normal', simOnly: true },
         ]}
       />
       <Pipe x1={xCooler1 + 60} y1={AXIS_Y} x2={xScrub2 - 38} y2={AXIS_Y} psig={P_1} flow={flows.m_comp} />
@@ -511,12 +439,12 @@ export default function PidDiagram({ tags, flows, valves, alarms, cmdEcho, simIn
       <Pipe x1={xCyl2 + 72} y1={AXIS_Y} x2={xCooler2 - 60} y2={AXIS_Y} psig={P_2} flow={flows.m_comp} />
       <AirCooler x={xCooler2} y={AXIS_Y} label="Intercool. 2" fansOn={n_fans} />
       {/* PT_1003 likewise serves both ST2 discharge and ST3 suction. */}
-      <ReadoutCard
-        x={xMid23} y={cardY3} tapX={xMid23} tapY={AXIS_Y} title="ST2 OUT / ST3 IN"
+      <ReadoutGroup
+        x={xMid23} tapX={xMid23} tapY={AXIS_Y} baseY={readoutBaseY}
         rows={[
-          { kind: 'P', value: formatTag('PT_1003', P_2).text, unit: formatTag('PT_1003', P_2).unit, tag: 'PT_1003', state: gs('PT_1003', P_2) },
-          { kind: 'T', value: formatTag('TT_2005', T_cyl2).text, unit: formatTag('TT_2005', T_cyl2).unit, tag: 'TT_2005', state: gs('TT_2005', T_cyl2) },
-          { kind: 'T', value: formatValue('TT', T_inter).text, unit: formatValue('TT', T_inter).unit, tag: '', state: 'normal', simOnly: true },
+          { value: formatTag('PT_1003', P_2).text, unit: formatTag('PT_1003', P_2).unit, tag: 'PT_1003', state: gs('PT_1003', P_2), band: alarms['PT_1003'] },
+          { value: formatTag('TT_2005', T_cyl2).text, unit: formatTag('TT_2005', T_cyl2).unit, tag: 'TT_2005', state: gs('TT_2005', T_cyl2), band: alarms['TT_2005'] },
+          { value: formatValue('TT', T_inter).text, unit: formatValue('TT', T_inter).unit, tag: '', state: 'normal', simOnly: true },
         ]}
       />
       <Pipe x1={xCooler2 + 60} y1={AXIS_Y} x2={xScrub3 - 38} y2={AXIS_Y} psig={P_2} flow={flows.m_comp} />
@@ -525,22 +453,22 @@ export default function PidDiagram({ tags, flows, valves, alarms, cmdEcho, simIn
       {/* stage 3 */}
       <Pipe x1={xScrub3 + 38} y1={AXIS_Y} x2={xCyl3 - 72} y2={AXIS_Y} psig={P_3} flow={flows.m_comp} />
       <ReciprocatingCylinder x={xCyl3} y={AXIS_Y} label="ST3" rpm={rpm} />
-      <ReadoutCard
-        x={xOut3} y={cardY2} tapX={xOut3} tapY={AXIS_Y} title="ST3 OUT"
+      <ReadoutGroup
+        x={xOut3} tapX={xOut3} tapY={AXIS_Y} baseY={readoutBaseY}
         rows={[
-          { kind: 'P', value: formatTag('PT_1004', P_3).text, unit: formatTag('PT_1004', P_3).unit, tag: 'PT_1004', state: gs('PT_1004', P_3) },
-          { kind: 'T', value: formatTag('TT_2006', T_cyl3).text, unit: formatTag('TT_2006', T_cyl3).unit, tag: 'TT_2006/07', state: gs('TT_2006', T_cyl3) },
+          { value: formatTag('PT_1004', P_3).text, unit: formatTag('PT_1004', P_3).unit, tag: 'PT_1004', state: gs('PT_1004', P_3), band: alarms['PT_1004'] },
+          { value: formatTag('TT_2006', T_cyl3).text, unit: formatTag('TT_2006', T_cyl3).unit, tag: 'TT_2006/07', state: gs('TT_2006', T_cyl3), band: alarms['TT_2006'] },
         ]}
       />
       <Pipe x1={xCyl3 + 72} y1={AXIS_Y} x2={xAfterclr - 60} y2={AXIS_Y} psig={P_3} flow={flows.m_comp} />
       <AirCooler x={xAfterclr} y={AXIS_Y} label="Aftercooler" fansOn={n_fans} />
       {/* sits directly above the aftercooler it measures — short vertical
           leader, no diagonal run out to a right-hand gutter. */}
-      <ReadoutCard
-        x={xAfterclr} y={cardY2} tapX={xAfterclr} tapY={AXIS_Y} title="AFTERCOOLER / FINAL"
+      <ReadoutGroup
+        x={xAfterclr} tapX={xAfterclr} tapY={AXIS_Y} baseY={readoutBaseY}
         rows={[
-          { kind: 'P', value: formatTag('PT_1006', P_d).text, unit: formatTag('PT_1006', P_d).unit, tag: 'PT_1006', state: gs('PT_1006', P_d) },
-          { kind: 'T', value: formatTag('TT_2013', T_ac).text, unit: formatTag('TT_2013', T_ac).unit, tag: 'TT_2013', state: gs('TT_2013', T_ac) },
+          { value: formatTag('PT_1006', P_d).text, unit: formatTag('PT_1006', P_d).unit, tag: 'PT_1006', state: gs('PT_1006', P_d), band: alarms['PT_1006'] },
+          { value: formatTag('TT_2013', T_ac).text, unit: formatTag('TT_2013', T_ac).unit, tag: 'TT_2013', state: gs('TT_2013', T_ac), band: alarms['TT_2013'] },
         ]}
       />
 
