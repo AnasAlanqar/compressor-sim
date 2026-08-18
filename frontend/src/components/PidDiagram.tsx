@@ -33,6 +33,10 @@ interface Props {
    * — rendered in a visually distinct "simulator-only" style, never mixed
    * into the instrumented readouts. */
   simInsight: SimInsight;
+  /** WS link down (§7: never show a stale number as if it were live) —
+   * real-tag readouts render "-.-" instead of the last value received
+   * before the drop. Sim-only rows are unaffected (nothing to go stale). */
+  stale?: boolean;
 }
 
 const num = (tags: SimTags, tag: string) => (typeof tags[tag] === 'number' ? (tags[tag] as number) : 0);
@@ -259,9 +263,10 @@ function TrainBracket({ x, width, y, rpm }: { x: number; width: number; y: numbe
   );
 }
 
-export default function PidDiagram({ tags, flows, valves, alarms, cmdEcho, simInsight }: Props) {
+export default function PidDiagram({ tags, flows, valves, alarms, cmdEcho, simInsight, stale = false }: Props) {
   const { ref: containerRef, height: CANVAS_H } = useContainerHeight(CANVAS_W, CANVAS_H_REF);
   const AXIS_Y = BASE_AXIS_Y + Math.max(0, (CANVAS_H - CANVAS_H_REF) / 2);
+  const ft = (tag: string, value: number) => formatTag(tag, value, stale);
 
   const P_s = num(tags, 'PT_1001');
   const P_1 = num(tags, 'PT_1002');
@@ -389,7 +394,7 @@ export default function PidDiagram({ tags, flows, valves, alarms, cmdEcho, simIn
       <ReadoutGroup
         x={xIn1} tapX={xIn1} tapY={AXIS_Y} baseY={readoutBaseY}
         rows={[
-          { value: formatTag('PT_1001', P_s).text, unit: formatTag('PT_1001', P_s).unit, tag: 'PT_1001', state: gs('PT_1001', P_s), band: alarms['PT_1001'] },
+          { value: ft('PT_1001', P_s).text, unit: ft('PT_1001', P_s).unit, tag: 'PT_1001', state: gs('PT_1001', P_s), band: alarms['PT_1001'] },
           { value: formatValue('TT', T_suc).text, unit: formatValue('TT', T_suc).unit, tag: '', state: 'normal', simOnly: true },
         ]}
       />
@@ -401,8 +406,8 @@ export default function PidDiagram({ tags, flows, valves, alarms, cmdEcho, simIn
       <ReadoutGroup
         x={xMid12} tapX={xMid12} tapY={AXIS_Y} baseY={readoutBaseY}
         rows={[
-          { value: formatTag('PT_1002', P_1).text, unit: formatTag('PT_1002', P_1).unit, tag: 'PT_1002', state: gs('PT_1002', P_1), band: alarms['PT_1002'] },
-          { value: formatTag('TT_2004', T_cyl1).text, unit: formatTag('TT_2004', T_cyl1).unit, tag: 'TT_2004', state: gs('TT_2004', T_cyl1), band: alarms['TT_2004'] },
+          { value: ft('PT_1002', P_1).text, unit: ft('PT_1002', P_1).unit, tag: 'PT_1002', state: gs('PT_1002', P_1), band: alarms['PT_1002'] },
+          { value: ft('TT_2004', T_cyl1).text, unit: ft('TT_2004', T_cyl1).unit, tag: 'TT_2004', state: gs('TT_2004', T_cyl1), band: alarms['TT_2004'] },
           { value: formatValue('TT', T_inter).text, unit: formatValue('TT', T_inter).unit, tag: '', state: 'normal', simOnly: true },
         ]}
       />
@@ -418,8 +423,8 @@ export default function PidDiagram({ tags, flows, valves, alarms, cmdEcho, simIn
       <ReadoutGroup
         x={xMid23} tapX={xMid23} tapY={AXIS_Y} baseY={readoutBaseY}
         rows={[
-          { value: formatTag('PT_1003', P_2).text, unit: formatTag('PT_1003', P_2).unit, tag: 'PT_1003', state: gs('PT_1003', P_2), band: alarms['PT_1003'] },
-          { value: formatTag('TT_2005', T_cyl2).text, unit: formatTag('TT_2005', T_cyl2).unit, tag: 'TT_2005', state: gs('TT_2005', T_cyl2), band: alarms['TT_2005'] },
+          { value: ft('PT_1003', P_2).text, unit: ft('PT_1003', P_2).unit, tag: 'PT_1003', state: gs('PT_1003', P_2), band: alarms['PT_1003'] },
+          { value: ft('TT_2005', T_cyl2).text, unit: ft('TT_2005', T_cyl2).unit, tag: 'TT_2005', state: gs('TT_2005', T_cyl2), band: alarms['TT_2005'] },
           { value: formatValue('TT', T_inter).text, unit: formatValue('TT', T_inter).unit, tag: '', state: 'normal', simOnly: true },
         ]}
       />
@@ -432,8 +437,8 @@ export default function PidDiagram({ tags, flows, valves, alarms, cmdEcho, simIn
       <ReadoutGroup
         x={xOut3} tapX={xOut3} tapY={AXIS_Y} baseY={readoutBaseY}
         rows={[
-          { value: formatTag('PT_1004', P_3).text, unit: formatTag('PT_1004', P_3).unit, tag: 'PT_1004', state: gs('PT_1004', P_3), band: alarms['PT_1004'] },
-          { value: formatTag('TT_2006', T_cyl3).text, unit: formatTag('TT_2006', T_cyl3).unit, tag: 'TT_2006/07', state: gs('TT_2006', T_cyl3), band: alarms['TT_2006'] },
+          { value: ft('PT_1004', P_3).text, unit: ft('PT_1004', P_3).unit, tag: 'PT_1004', state: gs('PT_1004', P_3), band: alarms['PT_1004'] },
+          { value: ft('TT_2006', T_cyl3).text, unit: ft('TT_2006', T_cyl3).unit, tag: 'TT_2006/07', state: gs('TT_2006', T_cyl3), band: alarms['TT_2006'] },
         ]}
       />
       <Pipe x1={xCyl3 + 72} y1={AXIS_Y} x2={xAfterclr - 60} y2={AXIS_Y} psig={P_3} flow={flows.m_comp} />
@@ -443,8 +448,8 @@ export default function PidDiagram({ tags, flows, valves, alarms, cmdEcho, simIn
       <ReadoutGroup
         x={xAfterclr} tapX={xAfterclr} tapY={AXIS_Y} baseY={readoutBaseY}
         rows={[
-          { value: formatTag('PT_1006', P_d).text, unit: formatTag('PT_1006', P_d).unit, tag: 'PT_1006', state: gs('PT_1006', P_d), band: alarms['PT_1006'] },
-          { value: formatTag('TT_2013', T_ac).text, unit: formatTag('TT_2013', T_ac).unit, tag: 'TT_2013', state: gs('TT_2013', T_ac), band: alarms['TT_2013'] },
+          { value: ft('PT_1006', P_d).text, unit: ft('PT_1006', P_d).unit, tag: 'PT_1006', state: gs('PT_1006', P_d), band: alarms['PT_1006'] },
+          { value: ft('TT_2013', T_ac).text, unit: ft('TT_2013', T_ac).unit, tag: 'TT_2013', state: gs('TT_2013', T_ac), band: alarms['TT_2013'] },
         ]}
       />
 

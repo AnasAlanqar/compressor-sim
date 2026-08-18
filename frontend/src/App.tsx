@@ -89,7 +89,10 @@ function AppShellNew() {
 
       <div className="flex min-h-0 flex-1">
         <div className="min-w-0 flex-1 overflow-hidden p-2">
-          <PidDiagram tags={tags} flows={flows} valves={valves} alarms={alarms} cmdEcho={cmdEcho} simInsight={simInsight} />
+          <PidDiagram
+            tags={tags} flows={flows} valves={valves} alarms={alarms} cmdEcho={cmdEcho} simInsight={simInsight}
+            stale={status !== 'connected'}
+          />
         </div>
         <RightDock
           summary={summary}
@@ -106,7 +109,7 @@ function AppShellNew() {
         />
       </div>
 
-      <DriverStrip tags={tags} alarms={alarms} />
+      <DriverStrip tags={tags} alarms={alarms} stale={status !== 'connected'} />
 
       {opcSettingsOpen && (
         <OpcuaSettingsModal

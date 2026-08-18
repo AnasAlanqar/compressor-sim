@@ -28,14 +28,14 @@ function Field({ label, value, unit, large }: { label: string; value: string; un
   );
 }
 
-export default function DriverStrip({ tags, alarms }: { tags: SimTags; alarms: AlarmTable }) {
+export default function DriverStrip({ tags, alarms, stale = false }: { tags: SimTags; alarms: AlarmTable; stale?: boolean }) {
   const rpm = typeof tags.ST_1008 === 'number' ? tags.ST_1008 : 0;
   const oilP = typeof tags.PT_1005 === 'number' ? tags.PT_1005 : 0;
   const oilT = typeof tags.TT_2001 === 'number' ? tags.TT_2001 : 0;
   const running = rpm > 5;
-  const speed = formatValue('speed', rpm);
-  const oilPf = formatTag('PT_1005', oilP);
-  const oilTf = formatTag('TT_2001', oilT);
+  const speed = formatValue('speed', rpm, stale);
+  const oilPf = formatTag('PT_1005', oilP, stale);
+  const oilTf = formatTag('TT_2001', oilT, stale);
   const oilPState = gaugeState('PT_1005', oilP, alarms);
   const oilTState = gaugeState('TT_2001', oilT, alarms);
   return (
