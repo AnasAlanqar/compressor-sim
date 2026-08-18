@@ -2,6 +2,13 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import type { SimTags, Flows, ValvePositions, SimInsight } from '../hooks/useSimState';
 import { gaugeState, type AlarmTable, type GaugeState } from '../lib/pid';
 import { formatTag, formatValue } from '../lib/engUnits';
+import Separator from './symbols/Separator';
+import ReciprocatingCylinder from './symbols/ReciprocatingCylinder';
+import AirCooler from './symbols/AirCooler';
+import GateValve from './symbols/GateValve';
+import ControlValve from './symbols/ControlValve';
+import BlowdownValve from './symbols/BlowdownValve';
+import GasEngine from './symbols/GasEngine';
 
 // ISA-101: normal state carries no color at all. Alarm state is the only
 // thing color communicates — see tokens.css §"Alarm priorities" and
@@ -128,72 +135,6 @@ function Pipe({ x1, y1, x2, y2, flow }: { x1: number; y1: number; x2: number; y2
       <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="var(--pipe-major)" strokeWidth="var(--w-pipe-major)" strokeLinecap="butt" strokeLinejoin="miter" />
       <Chevrons x1={x1} y1={y1} x2={x2} y2={y2} />
       <FlowDots path={path} flow={flow} />
-    </g>
-  );
-}
-
-// Bowtie valve glyph — the shape itself carries state as well as the fill
-// colour: closed gets a blocking bar through the pinch point, open gets a
-// soft glow halo, in-transit pulses a dashed ring. `orientation` rotates the
-// glyph for valves sitting on a vertical run (blowdown) without rotating the
-// surrounding labels.
-function ValveIcon({
-  x,
-  y,
-  pct,
-  label,
-  sub,
-  orientation = 'h',
-}: {
-  x: number;
-  y: number;
-  pct: number;
-  label: string;
-  sub: string;
-  orientation?: 'h' | 'v';
-}) {
-  const closed = pct < 2;
-  const open = pct > 98;
-  const transit = !closed && !open;
-  // Position, not color, carries valve state (§7): closed fills solid,
-  // open reads hollow against the canvas, in-transit sits between the two.
-  const color = closed ? 'var(--equip-fill)' : open ? 'var(--hmi-canvas)' : 'var(--equip-fill-active)';
-  const rot = orientation === 'v' ? 90 : 0;
-  // State is carried by the glyph shape and colour, but also spelled out as
-  // text so open/closed/transit reads without relying on colour perception.
-  const stateWord = closed ? 'CLOSED' : open ? 'OPEN' : 'MOVING';
-  return (
-    <g transform={`translate(${x},${y})`}>
-      <g transform={`rotate(${rot})`}>
-        <path d="M-46,-32 L-46,32 L0,0 Z M46,-32 L46,32 L0,0 Z" fill={color} stroke="var(--equip-stroke)" strokeWidth={3} />
-        {closed && <rect x={-10} y={-36} width={20} height={72} rx={4} fill="var(--hmi-canvas)" stroke={color} strokeWidth={3} />}
-        {transit && (
-          <circle r={52} fill="none" stroke="var(--equip-stroke)" strokeWidth={4.5} strokeDasharray="8 8" strokeOpacity={0.85}>
-            <animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="2.2s" repeatCount="indefinite" />
-          </circle>
-        )}
-      </g>
-      <text
-        y={-72}
-        textAnchor="middle"
-        fontSize={26}
-        fontFamily="var(--font-value)"
-        fontWeight={500}
-        fill="var(--text-value)"
-        style={{ fontVariantNumeric: 'tabular-nums' }}
-      >
-        {formatValue('FC', pct).text}
-        <tspan fontFamily="var(--font-label)" fill="var(--text-tag)"> {formatValue('FC', pct).unit}</tspan>
-      </text>
-      <text y={52} textAnchor="middle" fontSize={14} fontWeight={500} letterSpacing={0.6} fill="var(--text-label)">
-        {stateWord}
-      </text>
-      <text y={78} textAnchor="middle" fontSize={19} fill="var(--text-label)">
-        {label}
-      </text>
-      <text y={99} textAnchor="middle" fontSize={15} fill="var(--text-tag)">
-        {sub}
-      </text>
     </g>
   );
 }
@@ -351,75 +292,6 @@ function Legend({ x, y }: { x: number; y: number }) {
   );
 }
 
-function Cylinder({ x, y, label, rpm }: { x: number; y: number; label: string; rpm: number }) {
-  const running = rpm > 5;
-  return (
-    <g transform={`translate(${x},${y})`}>
-      <rect
-        x={-72}
-        y={-67}
-        width={144}
-        height={134}
-        rx={14}
-        fill={running ? 'var(--equip-fill-active)' : 'var(--equip-fill)'}
-        stroke={running ? 'var(--equip-stroke)' : 'var(--equip-stroke-idle)'}
-        strokeWidth={running ? 1.5 : 1}
-      />
-      <text y={-10} textAnchor="middle" fontSize={28} fontWeight={500} fill="var(--text-label)">
-        {label}
-      </text>
-      <text y={26} textAnchor="middle" fontSize={17} fontWeight={500} letterSpacing={0.6} fill="var(--text-label)">
-        {running ? 'RUN' : 'OFF'}
-      </text>
-      <text y={101} textAnchor="middle" fontSize={15} fill="var(--text-tag)">
-        cylinder
-      </text>
-    </g>
-  );
-}
-
-function Cooler({ x, y, label, fansOn }: { x: number; y: number; label: string; fansOn: number; heat: number }) {
-  const running = fansOn > 0;
-  return (
-    <g transform={`translate(${x},${y})`}>
-      <rect
-        x={-60}
-        y={-54}
-        width={120}
-        height={108}
-        rx={9}
-        fill={running ? 'var(--equip-fill-active)' : 'var(--equip-fill)'}
-        stroke={running ? 'var(--equip-stroke)' : 'var(--equip-stroke-idle)'}
-        strokeWidth={running ? 1.5 : 1}
-      />
-      {[0, 1].map((i) => (
-        <g key={i} transform={`translate(${-22 + i * 44},0)`}>
-          <path
-            d="M0,-22 L5.2,-5.2 L22,0 L5.2,5.2 L0,22 L-5.2,5.2 L-22,0 L-5.2,-5.2 Z"
-            fill={fansOn > i ? 'var(--equip-stroke)' : 'var(--equip-stroke-idle)'}
-          />
-        </g>
-      ))}
-      <text y={78} textAnchor="middle" fontSize={15} fill="var(--text-label)">
-        {label}
-      </text>
-      <text y={99} textAnchor="middle" fontSize={14} fontWeight={500} letterSpacing={0.5} fill="var(--text-label)">
-        {`${fansOn}/2 FANS ${running ? 'ON' : 'OFF'}`}
-      </text>
-    </g>
-  );
-}
-
-function Vessel({ x, y, label }: { x: number; y: number; label: string }) {
-  return (
-    <g transform={`translate(${x},${y})`}>
-      <rect x={-38} y={-67} width={76} height={134} rx={38} fill="var(--equip-fill)" stroke="var(--equip-stroke-idle)" strokeWidth={1} />
-      <text y={101} textAnchor="middle" fontSize={15} fill="var(--text-label)">
-        {label}
-      </text>
-    </g>
-  );
-}
 
 function BlowdownPlume({ x, y, active }: { x: number; y: number; active: boolean }) {
   if (!active) return null;
@@ -475,23 +347,7 @@ function EngineBlock({ x, y, width, rpm }: { x: number; y: number; width: number
           RPM
         </text>
       </g>
-      <g transform={`translate(${cx},68)`}>
-        <circle r={32} fill="var(--hmi-surface-sunken)" stroke="var(--equip-stroke-idle)" strokeWidth={4} />
-        <g>
-          {running && (
-            <animateTransform
-              attributeName="transform"
-              type="rotate"
-              from="0"
-              to="360"
-              dur={`${Math.max(0.1, 60 / Math.max(rpm, 1))}s`}
-              repeatCount="indefinite"
-            />
-          )}
-          <line x1={0} y1={0} x2={25} y2={0} stroke="var(--equip-stroke)" strokeWidth={4} strokeLinecap="round" />
-          <circle r={4} fill="var(--equip-stroke)" />
-        </g>
-      </g>
+      <GasEngine x={cx} y={68} running={running} />
     </g>
   );
 }
@@ -618,11 +474,11 @@ export default function PidDiagram({ tags, flows, valves, alarms, cmdEcho, simIn
 
       {/* suction train — short stub in from the boundary, no dead run */}
       <Pipe x1={16} y1={AXIS_Y} x2={xSucScrub - 38} y2={AXIS_Y} psig={P_s} flow={flows.m_sup} />
-      <Vessel x={xSucScrub} y={AXIS_Y} label="Suc. scrub." />
+      <Separator x={xSucScrub} y={AXIS_Y} label="Suc. scrub." />
       <Pipe x1={xSucScrub + 38} y1={AXIS_Y} x2={xSesd - 46} y2={AXIS_Y} psig={P_s} flow={flows.m_sup} />
-      <ValveIcon x={xSesd} y={AXIS_Y} pct={Z_sesd} label="Suction ESD" sub="CMD_4009" />
+      <GateValve x={xSesd} y={AXIS_Y} pct={Z_sesd} label="Suction ESD" tag="CMD_4009" />
       <Pipe x1={xSesd + 46} y1={AXIS_Y} x2={xSucCtrl - 46} y2={AXIS_Y} psig={P_s} flow={flows.m_sup} />
-      <ValveIcon x={xSucCtrl} y={AXIS_Y} pct={Z_suc} label="Suction ctrl" sub="FC_3003" />
+      <ControlValve x={xSucCtrl} y={AXIS_Y} pct={Z_suc} label="Suction ctrl" tag="FC_3003" />
       <Pipe x1={xSucCtrl + 46} y1={AXIS_Y} x2={xCyl1 - 72} y2={AXIS_Y} psig={P_s} flow={flows.m_comp} />
 
       {/* suction */}
@@ -633,9 +489,9 @@ export default function PidDiagram({ tags, flows, valves, alarms, cmdEcho, simIn
           { kind: 'T', value: formatValue('TT', T_suc).text, unit: formatValue('TT', T_suc).unit, tag: '', state: 'normal', simOnly: true },
         ]}
       />
-      <Cylinder x={xCyl1} y={AXIS_Y} label="ST1" rpm={rpm} />
+      <ReciprocatingCylinder x={xCyl1} y={AXIS_Y} label="ST1" rpm={rpm} />
       <Pipe x1={xCyl1 + 72} y1={AXIS_Y} x2={xCooler1 - 60} y2={AXIS_Y} psig={P_1} flow={flows.m_comp} />
-      <Cooler x={xCooler1} y={AXIS_Y} label="Intercool. 1" fansOn={n_fans} heat={n_fans / 2} />
+      <AirCooler x={xCooler1} y={AXIS_Y} label="Intercool. 1" fansOn={n_fans} />
       {/* PT_1002 sits on the pipe between ST1 and ST2 — one card serves both
           the ST1 discharge and ST2 suction reading, since it's one tap. */}
       <ReadoutCard
@@ -647,13 +503,13 @@ export default function PidDiagram({ tags, flows, valves, alarms, cmdEcho, simIn
         ]}
       />
       <Pipe x1={xCooler1 + 60} y1={AXIS_Y} x2={xScrub2 - 38} y2={AXIS_Y} psig={P_1} flow={flows.m_comp} />
-      <Vessel x={xScrub2} y={AXIS_Y} label="ST2 scrub." />
+      <Separator x={xScrub2} y={AXIS_Y} label="ST2 scrub." />
 
       {/* stage 2 */}
       <Pipe x1={xScrub2 + 38} y1={AXIS_Y} x2={xCyl2 - 72} y2={AXIS_Y} psig={P_2} flow={flows.m_comp} />
-      <Cylinder x={xCyl2} y={AXIS_Y} label="ST2" rpm={rpm} />
+      <ReciprocatingCylinder x={xCyl2} y={AXIS_Y} label="ST2" rpm={rpm} />
       <Pipe x1={xCyl2 + 72} y1={AXIS_Y} x2={xCooler2 - 60} y2={AXIS_Y} psig={P_2} flow={flows.m_comp} />
-      <Cooler x={xCooler2} y={AXIS_Y} label="Intercool. 2" fansOn={n_fans} heat={n_fans / 2} />
+      <AirCooler x={xCooler2} y={AXIS_Y} label="Intercool. 2" fansOn={n_fans} />
       {/* PT_1003 likewise serves both ST2 discharge and ST3 suction. */}
       <ReadoutCard
         x={xMid23} y={cardY3} tapX={xMid23} tapY={AXIS_Y} title="ST2 OUT / ST3 IN"
@@ -664,11 +520,11 @@ export default function PidDiagram({ tags, flows, valves, alarms, cmdEcho, simIn
         ]}
       />
       <Pipe x1={xCooler2 + 60} y1={AXIS_Y} x2={xScrub3 - 38} y2={AXIS_Y} psig={P_2} flow={flows.m_comp} />
-      <Vessel x={xScrub3} y={AXIS_Y} label="ST3 scrub." />
+      <Separator x={xScrub3} y={AXIS_Y} label="ST3 scrub." />
 
       {/* stage 3 */}
       <Pipe x1={xScrub3 + 38} y1={AXIS_Y} x2={xCyl3 - 72} y2={AXIS_Y} psig={P_3} flow={flows.m_comp} />
-      <Cylinder x={xCyl3} y={AXIS_Y} label="ST3" rpm={rpm} />
+      <ReciprocatingCylinder x={xCyl3} y={AXIS_Y} label="ST3" rpm={rpm} />
       <ReadoutCard
         x={xOut3} y={cardY2} tapX={xOut3} tapY={AXIS_Y} title="ST3 OUT"
         rows={[
@@ -677,7 +533,7 @@ export default function PidDiagram({ tags, flows, valves, alarms, cmdEcho, simIn
         ]}
       />
       <Pipe x1={xCyl3 + 72} y1={AXIS_Y} x2={xAfterclr - 60} y2={AXIS_Y} psig={P_3} flow={flows.m_comp} />
-      <Cooler x={xAfterclr} y={AXIS_Y} label="Aftercooler" fansOn={n_fans} heat={n_fans / 2} />
+      <AirCooler x={xAfterclr} y={AXIS_Y} label="Aftercooler" fansOn={n_fans} />
       {/* sits directly above the aftercooler it measures — short vertical
           leader, no diagonal run out to a right-hand gutter. */}
       <ReadoutCard
@@ -696,18 +552,18 @@ export default function PidDiagram({ tags, flows, valves, alarms, cmdEcho, simIn
 
       {/* discharge ESD -> pipeline, then a short stub to the boundary — no dead run */}
       <Pipe x1={xAfterclr + 60} y1={AXIS_Y} x2={xDesd - 46} y2={AXIS_Y} psig={P_d} flow={flows.m_proc} />
-      <ValveIcon x={xDesd} y={AXIS_Y} pct={Z_desd} label="Discharge ESD" sub="CMD_4010" />
+      <GateValve x={xDesd} y={AXIS_Y} pct={Z_desd} label="Discharge ESD" tag="CMD_4010" />
       <Pipe x1={xDesd + 46} y1={AXIS_Y} x2={xEnd} y2={AXIS_Y} psig={P_d} flow={flows.m_proc} />
 
       {/* bypass / recycle loop: final discharge -> lower loop, under the
           engine card, back into suction before ST1 */}
       <path d={bypassPath} fill="none" stroke="var(--pipe-minor)" strokeWidth="var(--w-pipe-minor)" strokeDasharray={Z_byp < 2 ? '3 9' : undefined} strokeLinecap="butt" />
-      <ValveIcon x={bypassValveX} y={loopY} pct={Z_byp} label="Bypass / recycle" sub="FC_3002" />
+      <ControlValve x={bypassValveX} y={loopY} pct={Z_byp} label="Bypass / recycle" tag="FC_3002" />
       <FlowDots path={bypassPath} flow={flows.m_byp} />
 
       {/* blowdown: suction to atmosphere */}
       <Pipe x1={xBlowdown} y1={AXIS_Y + 77} x2={xBlowdown} y2={AXIS_Y + 300} psig={P_s} flow={flows.m_bdv} />
-      <ValveIcon x={xBlowdown} y={AXIS_Y + 335} pct={Z_bdv} label="Blowdown" sub="CMD_4004" orientation="v" />
+      <BlowdownValve x={xBlowdown} y={AXIS_Y + 335} pct={Z_bdv} label="Blowdown" tag="CMD_4004" />
       <line x1={xBlowdown} y1={AXIS_Y + 400} x2={xBlowdown} y2={AXIS_Y + 480} stroke="var(--pipe-minor)" strokeWidth="var(--w-pipe-minor)" strokeLinecap="butt" />
       <BlowdownPlume x={xBlowdown} y={AXIS_Y + 472} active={Z_bdv > 50 && suctionOn} />
       <text x={xBlowdown} y={AXIS_Y + 510} textAnchor="middle" fontSize={13.5} letterSpacing={0.4} fill="var(--text-tag)">
