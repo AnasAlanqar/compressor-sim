@@ -12,7 +12,6 @@ compressor:
   V_disp: 0.023258     # m3/rev, stage 1 double-acting
   clearance: 0.078
   L_slip: 0.04
-  K_cap: 1.0
 
 volumes:
   V_s: 3.0              # m3 suction volume

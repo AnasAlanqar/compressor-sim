@@ -5,7 +5,17 @@ import { useState } from 'react';
 // browser), where the buttons harmlessly no-op.
 declare global {
   interface Window {
-    pywebview?: { api?: { minimize?: () => void; maximize?: () => void; restore?: () => void; close?: () => void } };
+    pywebview?: {
+      api?: {
+        minimize?: () => void;
+        maximize?: () => void;
+        restore?: () => void;
+        close?: () => void;
+        start_drag?: (screenX: number, screenY: number) => void;
+        drag?: (screenX: number, screenY: number) => void;
+        end_drag?: () => void;
+      };
+    };
   }
 }
 
@@ -14,16 +24,43 @@ function callApi(name: 'minimize' | 'maximize' | 'restore' | 'close') {
 }
 
 // 32px custom titlebar (§9 [A]) — frameless window, no native Windows
-// chrome; data-tauri-drag-region's pywebview equivalent is just "not a
-// button/input", which pywebview's default easy_drag already respects.
+// chrome. desktop.py runs with easy_drag=False: this installed pywebview
+// version's easy_drag has no element exclusion at all (verified against
+// webview/js/customize.js — the drag_selector/drag_region_direct_target_only
+// template hooks aren't wired to any create_window() kwarg here), so it was
+// starting a native window-move on *any* mousedown+drag anywhere in the
+// window, including on top of ManualOverridePanel's <input type="range">
+// sliders. Dragging is done by hand below, scoped to just this label area
+// (buttons are excluded since they stopPropagation isn't needed — mousedown
+// on a <button> still bubbles here, so the drag handler is only bound to
+// the label span itself, not the whole titlebar row).
 export default function Titlebar() {
-  const [maximized, setMaximized] = useState(false);
+  // desktop.py always opens the window with maximized=True, so the initial
+  // state has to match that — starting this at `false` meant the first
+  // click on the middle button was a no-op maximize() (already maximized)
+  // instead of the restore the user expected.
+  const [maximized, setMaximized] = useState(true);
   return (
     <div
       className="flex h-8 shrink-0 items-center"
       style={{ backgroundColor: 'var(--hmi-chrome)', borderBottom: 'var(--w-hairline) solid var(--hmi-rule)' }}
     >
-      <div className="flex flex-1 items-center px-3" style={{ height: '100%' }}>
+      <div
+        className="flex flex-1 items-center px-3"
+        style={{ height: '100%' }}
+        onMouseDown={(e) => {
+          if (e.button !== 0) return;
+          window.pywebview?.api?.start_drag?.(e.screenX, e.screenY);
+          const onMove = (ev: MouseEvent) => window.pywebview?.api?.drag?.(ev.screenX, ev.screenY);
+          const onUp = () => {
+            window.pywebview?.api?.end_drag?.();
+            window.removeEventListener('mousemove', onMove);
+            window.removeEventListener('mouseup', onUp);
+          };
+          window.addEventListener('mousemove', onMove);
+          window.addEventListener('mouseup', onUp);
+        }}
+      >
         <span
           className="text-[11px] font-medium uppercase"
           style={{ color: 'var(--text-tag)', letterSpacing: '0.08em' }}

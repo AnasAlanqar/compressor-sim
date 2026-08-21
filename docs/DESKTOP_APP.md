@@ -55,14 +55,35 @@ This does three things in order:
    this is intentional, see `compressor_sim.spec`'s comment).
 3. `iscc installer.iss` — wraps that folder into
    `installer_output\CompressorSim-Setup-<version>.exe`.
+4. Zips that installer into
+   `installer_output\CompressorSim-Setup-<version>.zip`.
 
-**`installer_output\CompressorSim-Setup-<version>.exe` is the one file you
-send to everyone else.** Nothing under `dist\` or `build\` needs to leave
-your machine.
+**`installer_output\CompressorSim-Setup-<version>.zip` is the one file you
+send to everyone else** — over WhatsApp, email, cloud drive, or a USB stick.
+The recipient saves it, extracts it, and gets exactly one
+`CompressorSim-Setup-<version>.exe` to double-click. Nothing under `dist\` or
+`build\` needs to leave your machine.
 
-If `iscc` isn't on PATH, `build.ps1` still finishes the PyInstaller step
-and tells you so — you'll have `CompressorSim.exe` to test with, just no
-installer yet.
+**Do not send the bare `.exe`.** Transfer channels — WhatsApp Desktop and
+browser downloads especially — run a downloaded file through Chromium's
+download manager, which first reserves the destination name with an empty
+0-byte file, then renames the real bytes into place afterward. The reservation
+already owns the name, so the real installer arrives as
+`CompressorSim-Setup-<version> (1).exe` and a 0-byte, generic-icon
+`CompressorSim-Setup-<version>.exe` is left sitting beside it. Sending the
+`.zip` sidesteps this entirely: a zip is an ordinary document these channels
+don't mangle, and it extracts to a single clean installer.
+
+After a successful installation, Setup removes the exact installer file that
+the user launched. This keeps a Desktop download from remaining beside the
+`Compressor Simulator` shortcut. It does not remove the containing folder or
+any other downloaded files. If Windows launched a numbered copy such as
+`... (1).exe`, cleanup also removes the unnumbered sibling only when it matches
+the CompressorSim setup naming scheme and is exactly zero bytes.
+
+If `iscc` is unavailable, `build.ps1` stops with an error instead of reporting
+a successful distributable build. Install Inno Setup 6 or add `iscc.exe` to
+PATH, then run the build again.
 
 ### Bumping the version
 
@@ -79,7 +100,7 @@ Runs exactly like the installed app, just from the build folder.
 
 ## Where things live once installed
 
-- App files: `%LOCALAPPDATA%\Programs\CompressorSim\`
+- App files: `%LOCALAPPDATA%\Programs\Compressor Simulator\`
 - Editable config (OPC UA endpoint, sim parameters): `%LOCALAPPDATA%\CompressorSim\config.yaml`
   — **not** the repo's `backend\config.yaml`. That one is only the
   bundled *default*, copied into the writable location above the first

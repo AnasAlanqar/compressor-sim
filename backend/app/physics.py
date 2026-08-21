@@ -45,7 +45,6 @@ class P:
     V_disp: float
     clearance: float
     L_slip: float
-    K_cap: float
 
     V_s: float
     V_d: float
@@ -105,7 +104,6 @@ def load_params(path) -> P:
         V_disp=c['compressor']['V_disp'],
         clearance=c['compressor']['clearance'],
         L_slip=c['compressor']['L_slip'],
-        K_cap=c['compressor']['K_cap'],
 
         V_s=c['volumes']['V_s'],
         V_d=c['volumes']['V_d'],
@@ -239,7 +237,7 @@ def algebra(y, cmd: Cmd, p: P):
     gate = 1.0 if (N > p.N_crank_term and y[S['Z_sesd']] > 2.0) else 0.0
     # NOTE: the suction control valve throttles the SUPPLY into the suction
     # volume, not the machine's displacement. It appears in m_sup, not here.
-    m_comp = p.K_cap * p.V_disp * rho_s * VE * (N / 60.0) * gate
+    m_comp = p.V_disp * rho_s * VE * (N / 60.0) * gate
 
     # --- temperature targets, pure algebra ---
     T_d1_t = p.T_suc * r_stg ** p.e_T

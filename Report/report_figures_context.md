@@ -1,0 +1,68 @@
+# Context Summary: Compressor Simulator Report Figures
+
+This document gives context for a set of 19 screenshots (see `compressor_simulator_report_figures.zip`) documenting the ARIEL JGH/4 compressor train simulator (Tauri/React HMI + OPC UA + CODESYS PLC). Use this to write the report section(s) that reference these figures — background, captions, and surrounding narrative.
+
+## System overview
+
+- **Simulated equipment:** ARIEL JGH/4 reciprocating compressor train (3 stages: ST1, ST2, ST3), driven by a CAT G3516LE engine (CAT ADEM controller), with a REMVue 500S-style panel concept. Project reference: PN17481.
+- **Architecture:** A desktop HMI (Tauri + React front end) connects over **OPC UA** to a **CODESYS** soft-PLC (CODESYS Control Win V3 x64) running the sequencing/control logic (project: `pi_opc_test.project`, CODESYS V3.5 SP22 Patch 1). The PLC can run locally on the same laptop as the HMI, or remotely on another device on the same network — both paths were demonstrated.
+- **Purpose of the figures:** to document (1) how the HMI connects to the PLC via OPC UA, (2) the CODESYS engineering environment used to develop/deploy the control logic, and (3) a live end-to-end test proving that a command written in one system (CODESYS GVL) is correctly reflected in the other (HMI), confirming the OPC UA link works bidirectionally.
+
+## Figure-by-figure context
+
+| # | Filename | What it shows |
+|---|----------|----------------|
+| 1 | fig01_hmi_home_compressor_train_stopped.png | HMI home screen / P&ID-style mimic of the compressor train at rest: ST1–ST3 compressors OFF, engine stopped, suction/discharge ESD valves closed, blowdown open (safe state). Sidebar shows Overrides panel (Engine, Valves) used for manual testing. |
+| 2 | fig02_hmi_connect_to_plc_dialog.png | "Connect to a PLC" dialog opened via the gear icon (top right). Two connection modes: "This computer" (CODESYS running locally) vs "Another device on the network" (remote PLC, with IP entry + "Scan my network"). |
+| 2b | fig02b_hmi_connect_to_plc_network_scan_results_alt.png | Same dialog, "Another device on the network" selected, after a network scan — an earlier/alternate scan result list (different IPs) than fig06. Optional; can be dropped or used as a secondary example. |
+| 3 | fig03_hmi_connect_to_plc_local_option.png | Dialog with "This computer" selected — the mode used when CODESYS runtime is running on the same laptop as the HMI (localhost OPC UA endpoint, `opc.tcp://localhost:4840`). |
+| 4 | fig04_hmi_connect_to_plc_connected_state.png | Dialog after connecting via "This computer" — status shows "Connected · this computer." Once connected, the sidebar Overrides become read-only (banner: "OPC UA connected — the PLC is driving. These are read-only indicators"), since the PLC now owns those values. |
+| 5 | fig05_hmi_home_opc_connected_readonly_overrides.png | Home screen with OPC UA connected: read-only banner visible, sidebar controls grayed out, live PLC-driven values shown (e.g., Bypass valve 100% open, dashed recycle line active, Speed command 75%). |
+| 6 | fig06_hmi_connect_to_plc_network_scan_results.png | Dialog with "Another device on the network" + results of "Scan my network": three discovered OPC UA servers (`OPCUAServer@DESKTOP-KC0FH83`) at different IPs, used to pick the CODESYS PC over the LAN instead of typing the IP manually. |
+| 7 | fig07_hmi_connect_to_plc_selected_network_server.png | Same dialog after selecting one of the scanned servers (172.20.10.2), IP field populated, ready to press Connect. |
+| 8 | fig08_hmi_connect_to_plc_connected_remote_codesys.png | Dialog showing a successful connection to the network-scanned server (172.20.10.2) — same physical CODESYS instance reachable either as "This computer" or as a "network device," since in this test the PLC and HMI happened to be on the same machine/network. |
+| 9 | fig09_codesys_ide_communication_settings.png | CODESYS IDE (`pi_opc_test.project`) — Devices tree (PLC Logic → Application → Communication Manager → OPC UA Server/Symbol Set → Task Configuration → MainTask → PLC_PRG) and the "Communication Settings" tab, showing an active Gateway connection to the local target `DESKTOP-KC0FH83` (CODESYS Control Win V3 x64, target version 3.5.22.10). |
+| 10 | fig10_codesys_login_button_tooltip.png | CODESYS toolbar close-up showing the **Login (Alt+F8)** button — the command used to download/attach the IDE to the running PLC application. |
+| 11 | fig11_windows_search_codesys_control_win_v3.png | Windows Start-menu search for "CODESYS Control Win V3 x64" — the soft-PLC runtime application that must be launched (as a background service/app) before the IDE or HMI can connect. |
+| 12 | fig12_codesys_runtime_console_log_opcua_started.png | Console/log output of the CODESYS Control Win V3 runtime after startup, confirming the **OPC UA Server started** on port 4840 (`opc.tcp://DESKTOP-KC0FH83:4840`), loopback adapter activated, and the compressor Application started successfully (demo mode, no runtime license, ~2 hr session). |
+| 13 | fig13_codesys_device_user_login_prompt.png | CODESYS "Device User Login" dialog — appears when the IDE user isn't yet authorized to view/modify the device; username/password entry for the CODESYS Control Win V3 x64 target. |
+| 14 | fig14_codesys_ide_online_application_running.png | CODESYS IDE after successful login — Devices tree shows "Device [connected]" and "Application [run]" highlighted green, confirming the control logic is deployed and actively executing on the target. |
+| 15 | fig15_codesys_gvl_plc_tag_list_cat_start_selected.png | The project's **Global Variable List (GVL_PLC)** viewed online, listing all I/O tags with live values and comments — alarms/permissives (e.g., LSH_7001–7004 scrubber high level, VSH_7011–7013 vibration trips, LSL_7021–7023 low level trips, PSL_7031 fuel-gas pressure low, FSL_7041/7042 lubricator no-flow), analog commands (SC_3001 engine speed, FC_3002 bypass valve, FC_3003 suction valve), and discrete commands (CMD_40xx series). Tag **CMD_4005 "CAT engine start command"** is selected, currently FALSE. |
+| 16 | fig16_hmi_home_cat_start_off_stopped.png | HMI home screen at the same moment — CAT start (CMD_4005) is OFF, engine STOPPED, 0 RPM — the "before" state for the test. |
+| 17 | fig17_codesys_gvl_plc_cat_start_true.png | Same GVL_PLC view after manually forcing/writing CMD_4005 to **TRUE** directly in CODESYS (online), alongside other already-true permissives (CMD_4004 blowdown solenoid, CMD_4006 CAT ESD healthy, CMD_4009 suction ESD solenoid). |
+| 18 | fig18_hmi_home_cat_start_true_from_plc.png | HMI home screen immediately after — CAT start indicator now shows TRUE (read-only, since the PLC is driving), demonstrating that the OPC UA link correctly synchronizes PLC-side changes to the HMI in real time. **This is the key proof-of-integration screenshot pair with fig16.** |
+| 19 | fig19_hmi_engineering_trends_pressures.png | The HMI's **Engineering Trends** tab: a live strip-chart/historian view (10 Hz acquisition, 30-minute rolling buffer, simulation time base) with 12 selectable pens (pressures, temperatures, engine speed, valve positions, oil pressure/temp, mass flow). Screenshot shows only the 4 pressure pens enabled: Suction (PT_1001), ST1 discharge (PT_1002), ST2 discharge (PT_1003), Final discharge (PT_1006). Dashed horizontal lines are configured engineering limits, not simulator alarms. Supports zoom/time-window selection and live-follow vs. scrubbing back in time. |
+| 20 | fig20_hmi_home_dark_theme_running.png | HMI home screen in **dark theme**, compressor train fully RUNNING (ST1–ST3 RUN, CAT G3516LE at 850 RPM, 120 psig oil pressure, 140.8°F oil temp, all cooler fans on), with realistic steady-state process values across all three stages (suction/discharge pressures and temps escalating stage to stage). Demonstrates the theme toggle and a representative "normal operation" snapshot. |
+| 21 | fig21_hmi_faults_tab_engine_process.png | HMI **Faults** tab (dark theme) — used to inject simulated failures for testing/training: **Engine** faults (low lube oil pressure trip at 35 psi, slow lube build exceeding a 120 s permissive timer, engine fails to start holding at 550 rpm running permit, mag pickup fault reporting 0 rpm while running, overspeed bias slider) and **Process** faults (blocked discharge % slider, valve-stuck selector). Includes a "Clear all faults" reset button. |
+| 22 | fig22_hmi_faults_tab_instrumentation_boundary_conditions.png | Bottom of the Faults tab: **Instrumentation** realism controls (signal lag 0.3–2 s first-order per tag, Gaussian signal noise per tag) and **Boundary Conditions** sliders (source pressure 60 psig, pipeline pressure 1050 psig, suction/inlet temperature 100°F, ambient temperature 90°F) that set the simulator's operating envelope/inputs. |
+| 23 | fig23_hmi_status_feedback_readonly.png | "Status Feedback (read-only)" panel (likely on the Overrides tab, engine section) — PLC-driven indicators: Cooler 1/2 running (RS_4011, RS_4012), Engine JW temp (TT_2014, 91°F), Engine oil pressure (PT_1007, 0 psig). |
+| 24 | fig24_hmi_operator_ecu_inputs_always_live.png | "Operator / ECU Inputs (always live)" panel — operator pushbuttons/ECU signals that stay interactive even when the PLC is connected and driving other controls: Unit shutdown (PB_5001), Local stop (PB_5003), Remote stop (PB_5004), Remote ESD (ESD_5002), CAT alarm (XA_6002), CAT fail SD / fail-to-shutdown (XS_6003). |
+| 25 | fig25_hmi_tags_vibration_oil_lubricator_tier2.png | Tags tab, Tier-2 protective groupings: **Vibration** trips (compressor frame VSH_7011, engine VSH_7012, skid/piping VSH_7013), **Oil/JW Levels** (compressor oil LSL_7021, engine oil LSL_7022, engine JW/coolant LSL_7023, fuel-gas pressure low PSL_7031), **Lubricator No-Flow** (bank 1 FSL_7041, bank 2 FSL_7042). |
+| 26 | fig26_hmi_faults_cylinder_bias_cooler_scrubber.png | Faults tab: **Cylinder Temperature Bias** sliders (Cylinders 1–4, individually adjustable °F offsets, all at 0°F baseline), **Cooler Motors** trip toggles (motor 1 & 2), and Tier-2 **Scrubber Levels** high-level faults (suction LSH_7001, ST2 LSH_7002, ST3 LSH_7003, fuel-gas LSH_7004). |
+| 27 | fig27_hmi_faults_signal_freeze_invalid_link_drop.png | Faults tab: **Signal Freeze / Invalid** matrix, letting the user freeze or force bad-quality on individual tags (pressures PT_1001–1006, speed ST_1008, temperatures TT_2001–2013) — used to test HMI/PLC handling of stale or invalid signals. Also includes **Link** (Link drop toggle — suspends OPC UA writes to exercise the watchdog) and **Instrumentation** (signal lag, signal noise) sections. |
+| 28 | fig28_hmi_tags_tab_live_values_list.png | "Tags" tab — a flat, live-updating listing of every OPC UA tag exposed by the simulator: alarms/permissives (ESD_5002, FSL_7041/7042, LSH_7001–7004, LSL_7021–7023, PB_5001/5003/5004, PS_2009, PSL_7031), pressures (PT_1001–1007), run feedbacks (RS_4011/4012), and internal diagnostics (`running`, `sim_insight`, `sim_time_s`, ST_1008, ST_2010, TT_2001…). Useful as a raw verification/reference view of the full OPC UA symbol set. |
+
+## Suggested narrative grouping for the report
+
+1. **HMI overview** — fig01 (home/mimic screen at rest, light theme), fig20 (home screen running, dark theme) — shows both operating states and the theme toggle.
+2. **PLC connection workflow** — fig02 → fig03/fig04 (local) and fig02b/fig06 → fig07 → fig08 (remote/network scan), fig05 (connected state effect on UI).
+3. **CODESYS development & deployment environment** — fig09 (project/communication settings), fig11 (launching the runtime), fig12 (runtime log confirming OPC UA server up), fig10 (Login command), fig13 (device login prompt), fig14 (online/running confirmation).
+4. **End-to-end OPC UA verification test** — fig15/fig16 (before: CMD_4005 false, engine stopped) → fig17/fig18 (after: CMD_4005 forced true in CODESYS, HMI reflects true) — proves live, correct, bidirectional tag mapping between CODESYS and the HMI.
+5. **Engineering trends / historian feature** — fig19 (trending capability for commissioning and diagnostics).
+6. **Fault injection / testing framework** — fig21 (engine + process faults), fig22 (instrumentation realism + boundary conditions), fig26 (cylinder temp bias, cooler motor trips, scrubber level faults — Tier 2), fig27 (signal freeze/invalid matrix + link drop watchdog test). Together these show a deliberately built test harness for validating HMI/PLC behavior under abnormal conditions, not just nominal operation.
+7. **Tag/status reference views** — fig23 (read-only status feedback panel), fig24 (always-live operator/ECU inputs panel — distinguishing tags that stay operator-controllable from those taken over by the PLC), fig25 (Tier-2 protective tag groupings: vibration, oil/JW levels, lubricator no-flow), fig28 (full flat tag list — a comprehensive OPC UA symbol reference, good for an appendix or a "tag dictionary" table in the report).
+
+## Key tag references mentioned across figures
+- `CMD_4005` – CAT engine start command
+- `CMD_4004` – Blowdown solenoid (energized = closed)
+- `CMD_4006` – CAT ESD healthy signal
+- `CMD_4008` – Driven-equipment-ready signal
+- `CMD_4009` – Suction ESD solenoid (energized = open)
+- `CMD_4001` – Auxiliary lube solenoid
+- `CMD_4003` – CAT idle/rated-speed selection
+- `SC_3001` – Engine speed command (0–100%)
+- `FC_3002` – Bypass valve command (0–100%)
+- `FC_3003` – Suction valve command (0–100%)
+- `PT_1001/1002/1003/1006` – Suction / ST1 / ST2 / Final discharge pressure transmitters
+- `ST_1008` – Engine speed (rpm)
+- `TT_2001/2004/2005/2013` – Oil temp / Cyl 1 temp / Cyl 2 temp / Aftercooler temp

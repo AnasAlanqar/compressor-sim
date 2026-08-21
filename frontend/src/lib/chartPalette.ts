@@ -5,18 +5,18 @@
 // as a fixed palette rather than resolving through tokens.css. Kept in one
 // file, away from component code, so it's still the single place to edit.
 export const CHART_PEN_COLORS: Record<string, string> = {
-  PT_1001: '#38bdf8',
-  PT_1002: '#818cf8',
-  PT_1003: '#a78bfa',
-  PT_1006: '#f472b6',
-  TT_2004: '#fb923c',
-  TT_2005: '#f59e0b',
-  ST_1008: '#60a5fa',
-  'valves.Z_byp': '#2dd4bf',
-  PT_1005: '#818cf8',
-  TT_2001: '#f87171',
-  TT_2013: '#fbbf24',
-  'flows.m_comp': '#c084fc',
+  PT_1001: '#0057D9',
+  PT_1002: '#D00000',
+  PT_1003: '#00833D',
+  PT_1006: '#7A28A8',
+  TT_2004: '#D14900',
+  TT_2005: '#A05A00',
+  ST_1008: '#007C91',
+  'valves.Z_byp': '#007A6E',
+  PT_1005: '#C0007F',
+  TT_2001: '#8F1D21',
+  TT_2013: '#695C00',
+  'flows.m_comp': '#3347B0',
 };
 
 export function cssVar(name: string): string {

@@ -19,13 +19,22 @@ this one from erosion over time.
 
 ## Toggling themes
 
-`Ctrl+Shift+L` cycles `light -> legacy` (see `useTheme.ts`); a `dark` theme
-value also exists and is reachable by setting `localStorage['hmi-theme']`
-directly. `legacy` renders `AppShellLegacy.tsx` — a frozen, byte-for-byte
-snapshot of the pre-restyle app, kept solely so the old and new HMI can be
+The "theme: …" button at the right end of the toolbar cycles
+`light -> cool -> dark -> light` (see `useTheme.ts` / `Toolbar.tsx`).
+`Ctrl+Shift+L` separately flips `light <-> legacy`, outside that cycle.
+`legacy` renders `AppShellLegacy.tsx` — a frozen, byte-for-byte snapshot
+of the pre-restyle app, kept solely so the old and new HMI can be
 compared side by side. **Never edit anything under the `*Legacy.tsx` /
 `tokens.legacy.css` files** — if the legacy comparison drifts, it stops
 being a useful baseline.
+
+`cool` is a non-spec variant, identical to `light` in every respect
+except one: running air coolers (`AirCooler.tsx`) get a desaturated blue
+tint (`--equip-fill-cooling` / `--equip-hatch-cooling`, defined only
+under `[data-theme="cool"]` in `tokens.css`) instead of the neutral
+`--equip-fill-active` gray. It exists as an opt-in alternate look, kept
+separate from `light`/`dark` so the ISA-101 "no color outside alarm
+state" rule stays intact in the default themes.
 
 ## Tokens
 

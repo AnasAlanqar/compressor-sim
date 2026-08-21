@@ -45,24 +45,67 @@ if (-not (Test-Path $exe)) {
 
 Write-Host "==> built: $exe" -ForegroundColor Green
 
+# Keep the distributable directory unambiguous: it must contain only the
+# installer produced by this build, never historical setup executables that
+# someone could accidentally copy together to a user's Desktop.
+$installerOutput = Join-Path $root "installer_output"
+New-Item -ItemType Directory -Force -Path $installerOutput | Out-Null
+Get-ChildItem -LiteralPath $installerOutput -Filter "CompressorSim-Setup-*.exe" -File |
+    Remove-Item -Force
+# The zip is the artifact you actually hand out (see below). Clear stale ones
+# too, so installer_output never accumulates old versions.
+Get-ChildItem -LiteralPath $installerOutput -Filter "CompressorSim-Setup-*.zip" -File |
+    Remove-Item -Force
+
 $iscc = Get-Command iscc.exe -ErrorAction SilentlyContinue
 if (-not $iscc) {
-    Write-Host "==> iscc not found on PATH - skipping installer." -ForegroundColor Yellow
-    Write-Host "    Install Inno Setup (https://jrsoftware.org/isinfo.php) to build" -ForegroundColor Yellow
-    Write-Host "    CompressorSim-Setup.exe, the single file to hand out to other users." -ForegroundColor Yellow
-    exit 0
+    $knownIscc = Join-Path $env:LOCALAPPDATA "Programs\Inno Setup 6\ISCC.exe"
+    if (Test-Path -LiteralPath $knownIscc) {
+        $iscc = Get-Item -LiteralPath $knownIscc
+    } else {
+        throw "iscc.exe not found. Install Inno Setup 6 or add it to PATH; no distributable installer was produced."
+    }
 }
+$isccPath = if ($iscc -is [System.IO.FileInfo]) { $iscc.FullName } else { $iscc.Path }
 
 Write-Host "==> iscc installer.iss" -ForegroundColor Cyan
-& $iscc.Path "installer.iss"
+$installerStaging = Join-Path ([System.IO.Path]::GetTempPath()) ("CompressorSimInstallerBuild-" + [guid]::NewGuid().ToString("N"))
+New-Item -ItemType Directory -Path $installerStaging | Out-Null
+& $isccPath ("/O" + $installerStaging) "installer.iss"
 if ($LASTEXITCODE -ne 0) {
     throw "iscc failed with exit code $LASTEXITCODE"
 }
 
-$setup = Get-ChildItem "installer_output\CompressorSim-Setup-*.exe" | Select-Object -First 1
-if (-not $setup) {
-    throw "iscc finished but no installer_output\CompressorSim-Setup-*.exe was found"
+$stagedSetups = @(Get-ChildItem -LiteralPath $installerStaging -Filter "CompressorSim-Setup-*.exe" -File)
+if ($stagedSetups.Count -ne 1) {
+    throw "expected exactly one staged installer in $installerStaging, found $($stagedSetups.Count)"
 }
+Move-Item -LiteralPath $stagedSetups[0].FullName -Destination $installerOutput
+Remove-Item -LiteralPath $installerStaging -Recurse -Force
+
+$setups = @(Get-ChildItem -LiteralPath $installerOutput -Filter "CompressorSim-Setup-*.exe" -File)
+if ($setups.Count -ne 1) {
+    throw "expected exactly one installer in $installerOutput, found $($setups.Count)"
+}
+$setup = $setups[0]
 
 Write-Host "==> installer built: $($setup.FullName)" -ForegroundColor Green
-Write-Host "    This is the one file to send to everyone else." -ForegroundColor Green
+
+# Wrap the single installer in a zip and hand THAT out — never the bare .exe.
+#
+# Why: transfer channels (WhatsApp Desktop, browser downloads, cloud sync) run
+# the file through Chromium's download manager, which reserves the destination
+# name with an empty 0-byte file, streams the real bytes to a temp file, then
+# renames it into place. The reservation already holds the name, so the real
+# installer lands as "CompressorSim-Setup-<ver> (1).exe" while a 0-byte,
+# generic-icon "CompressorSim-Setup-<ver>.exe" is left behind. WhatsApp is
+# also openly hostile to bare .exe attachments. A .zip is an ordinary document
+# none of these channels mangle: it transfers as one file, and extracting it
+# yields exactly one installer with no 0-byte sibling and no "(1)".
+$zipPath = Join-Path $installerOutput ($setup.BaseName + ".zip")
+Compress-Archive -LiteralPath $setup.FullName -DestinationPath $zipPath -Force
+$zip = Get-Item -LiteralPath $zipPath
+
+Write-Host "==> distributable built: $($zip.FullName)" -ForegroundColor Green
+Write-Host "    This zip is the one file to send to everyone else (WhatsApp, email, etc.)." -ForegroundColor Green
+Write-Host "    They save it, extract it, and get exactly one CompressorSim-Setup-*.exe." -ForegroundColor Green

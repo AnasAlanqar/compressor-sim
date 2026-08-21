@@ -11,7 +11,7 @@
 ; don't hand out admin rights, and this app needs none.
 
 #define MyAppName "Compressor Simulator"
-#define MyAppVersion "0.5.0"
+#define MyAppVersion "0.6.3-pilot"
 #define MyAppExeName "CompressorSim.exe"
 #define MyAppPublisher "Anas Alanqar"
 
@@ -20,11 +20,14 @@ AppId={{A5016499-0F6F-4213-95E3-705663EE06D8}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
-DefaultDirName={localappdata}\Programs\CompressorSim
+DefaultDirName={localappdata}\Programs\Compressor Simulator
+UsePreviousAppDir=no
 DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
+DisableDirPage=auto
+DisableReadyPage=yes
+DisableFinishedPage=yes
 PrivilegesRequired=lowest
-PrivilegesRequiredOverridesAllowed=dialog
 OutputDir=installer_output
 OutputBaseFilename=CompressorSim-Setup-{#MyAppVersion}
 Compression=lzma2
@@ -32,13 +35,15 @@ SolidCompression=yes
 WizardStyle=modern
 SetupIconFile=assets\icon.ico
 UninstallDisplayIcon={app}\{#MyAppExeName}
+UninstallDisplayName={#MyAppName}
+Uninstallable=yes
+CreateUninstallRegKey=yes
+CloseApplications=yes
+RestartApplications=no
 ArchitecturesInstallIn64BitMode=x64compatible
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
-
-[Tasks]
-Name: "desktopicon"; Description: "Create a &desktop shortcut"; GroupDescription: "Additional shortcuts:"
 
 [Files]
 ; The PyInstaller onedir build — run build.ps1 (or `pyinstaller compressor_sim.spec`) first.
@@ -53,11 +58,16 @@ Source: "redist\MicrosoftEdgeWebview2Setup.exe"; DestDir: "{tmp}"; Flags: delete
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{group}\Uninstall {#MyAppName}"; Filename: "{uninstallexe}"
-Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
+; The one and only Desktop item created by this installer. Because this is
+; strictly a per-user install, {userdesktop} is deterministic and cannot
+; alternate between the user and common Desktop across upgrades.
+Name: "{userdesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}"; IconFilename: "{app}\{#MyAppExeName}"
 
 [Run]
 Filename: "{tmp}\MicrosoftEdgeWebview2Setup.exe"; Parameters: "/silent /install"; StatusMsg: "Installing Microsoft Edge WebView2 Runtime..."; Check: WebView2Missing; Flags: waituntilterminated skipifdoesntexist
-Filename: "{app}\{#MyAppExeName}"; Description: "Launch {#MyAppName}"; Flags: nowait postinstall skipifsilent
+; Launch immediately after a normal interactive install. DisableFinishedPage
+; above means Setup closes without leaving an extra final confirmation page.
+Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}"; Flags: nowait skipifsilent
 
 [Code]
 // The Evergreen Runtime's own well-known "pv" (product version) registry
@@ -74,4 +84,69 @@ begin
   if not Found then
     Found := RegQueryStringValue(HKCU, 'SOFTWARE\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}', 'pv', Version);
   Result := not Found;
+end;
+
+// Setup cannot remove the source executable while its bootstrap process still
+// has that file open. After a successful install (ssDone), start a hidden,
+// short-lived cleanup process. It retries deletion of the exact {srcexe} path
+// only; it never uses a wildcard or touches the containing directory. The
+// temporary cleanup script removes itself when finished.
+procedure DeleteSourceInstallerAfterSuccess;
+var
+  InstallerPath: String;
+  EscapedInstallerPath: String;
+  CleanupScript: String;
+  ScriptBody: String;
+  ResultCode: Integer;
+begin
+  InstallerPath := ExpandConstant('{srcexe}');
+  Log('Scheduling deletion of source installer: ' + InstallerPath);
+  EscapedInstallerPath := InstallerPath;
+  StringChangeEx(EscapedInstallerPath, '''', '''''', True);
+
+  CleanupScript := ExpandConstant('{localappdata}\Temp\CompressorSim-Installer-Cleanup-') +
+    GetDateTimeString('yyyymmddhhnnss', '-', ':') + '.ps1';
+  ScriptBody :=
+    '$installerPath = ''' + EscapedInstallerPath + '''' + #13#10 +
+    '$sourceItem = Get-Item -LiteralPath $installerPath -ErrorAction SilentlyContinue' + #13#10 +
+    'if ($null -ne $sourceItem) {' + #13#10 +
+    '  $sourceStem = [System.IO.Path]::GetFileNameWithoutExtension($sourceItem.Name)' + #13#10 +
+    '  $sourceDirectory = $sourceItem.DirectoryName' + #13#10 +
+    '  $legacyCandidates = @()' + #13#10 +
+    '  if ($sourceStem -match ''^(CompressorSim-Setup-[A-Za-z0-9._-]+) \([0-9]+\)$'') {' + #13#10 +
+    '    $legacyCandidates += [System.IO.Path]::Combine($sourceDirectory, $Matches[1] + ''.exe'')' + #13#10 +
+    '    $legacyCandidates += [System.IO.Path]::Combine($sourceDirectory, $Matches[1])' + #13#10 +
+    '  }' + #13#10 +
+    '  foreach ($candidate in $legacyCandidates) {' + #13#10 +
+    '    if ($candidate -ne $installerPath) {' + #13#10 +
+    '      $candidateItem = Get-Item -LiteralPath $candidate -Force -ErrorAction SilentlyContinue' + #13#10 +
+    '      if (($null -ne $candidateItem) -and (-not $candidateItem.PSIsContainer) -and ($candidateItem.Length -eq 0)) {' + #13#10 +
+    '        Remove-Item -LiteralPath $candidateItem.FullName -Force -ErrorAction SilentlyContinue' + #13#10 +
+    '      }' + #13#10 +
+    '    }' + #13#10 +
+    '  }' + #13#10 +
+    '}' + #13#10 +
+    'for ($attempt = 0; $attempt -lt 30; $attempt++) {' + #13#10 +
+    '  Start-Sleep -Milliseconds 500' + #13#10 +
+    '  Remove-Item -LiteralPath $installerPath -Force -ErrorAction SilentlyContinue' + #13#10 +
+    '  if (-not (Test-Path -LiteralPath $installerPath)) { break }' + #13#10 +
+    '}' + #13#10 +
+    'Remove-Item -LiteralPath $PSCommandPath -Force -ErrorAction SilentlyContinue' + #13#10;
+
+  if SaveStringToFile(CleanupScript, ScriptBody, False) then
+  begin
+    if not Exec(
+      ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'),
+      '-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File "' + CleanupScript + '"',
+      '', SW_HIDE, ewNoWait, ResultCode) then
+      Log('Could not start installer cleanup process. Error code: ' + IntToStr(ResultCode));
+  end
+  else
+    Log('Could not write installer cleanup script: ' + CleanupScript);
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+  if CurStep = ssDone then
+    DeleteSourceInstallerAfterSuccess;
 end;

@@ -95,19 +95,19 @@ function SwitchTile({
       aria-checked={checked}
       disabled={disabled}
       onClick={() => onChange(!checked)}
-      className={`flex flex-col gap-1 rounded border px-2 py-1 text-left transition-colors ${
+      className={`flex flex-col gap-1 rounded border px-2 py-2 text-left transition-colors ${
         checked ? 'border-[var(--hmi-rule-strong)] bg-[var(--hmi-surface)]' : 'border-[var(--hmi-rule)] bg-[var(--hmi-surface)]'
       } ${disabled ? 'opacity-40' : 'hover:border-[var(--hmi-rule-strong)]'}`}
     >
       <span className="flex items-center justify-between gap-2">
-        <span className="text-[11px] leading-tight text-[var(--text-value)]">{label}</span>
+        <span style={{ fontSize: 'var(--fs-label)' }} className="leading-tight text-[var(--text-value)]">{label}</span>
         <span
-          className={`h-2 w-2 shrink-0 rounded-full ${
+          className={`h-2.5 w-2.5 shrink-0 rounded-full ${
             checked ? 'bg-[var(--text-value)]' : 'bg-[var(--btn-face-hover)]'
           }`}
         />
       </span>
-      <span className="font-mono text-[9px] text-[var(--text-tag)]">{hint}</span>
+      <span className="font-mono text-[var(--text-tag)]" style={{ fontSize: 'var(--fs-tag)' }}>{hint}</span>
     </button>
   );
 }
@@ -126,11 +126,13 @@ function CompactSlider({
   onChange: (v: number) => void;
 }) {
   return (
-    <div className="rounded border border-[var(--hmi-rule)] bg-[var(--hmi-surface)] px-2 py-1">
+    <div className="rounded border border-[var(--hmi-rule)] bg-[var(--hmi-surface)] px-2 py-1.5">
       <div className="flex items-baseline justify-between gap-2">
-        <span className="text-[11px] text-[var(--text-value)]">{label}</span>
-        <span className="tabular font-mono text-[11px] text-[var(--text-value)]">{value.toFixed(0)}%</span>
+        <span style={{ fontSize: 'var(--fs-label)' }} className="text-[var(--text-value)]">{label}</span>
+        <span className="tabular font-mono text-[var(--text-value)]" style={{ fontSize: 'var(--fs-value-sm)' }}>{value.toFixed(0)}%</span>
       </div>
+      {/* Padding enlarges the input's hit box well past its 4px visual
+          track, so a slightly off-center click still lands on the slider. */}
       <input
         type="range"
         min={0}
@@ -139,9 +141,10 @@ function CompactSlider({
         value={value}
         disabled={disabled}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="mt-1 h-1 w-full accent-[var(--focus-ring)] disabled:opacity-40"
+        className="mt-1 h-1 w-full cursor-pointer accent-[var(--focus-ring)] disabled:opacity-40"
+        style={{ padding: '10px 0', boxSizing: 'content-box' }}
       />
-      <div className="mt-0.5 font-mono text-[9px] text-[var(--text-tag)]">{hint}</div>
+      <div className="mt-0.5 font-mono text-[var(--text-tag)]" style={{ fontSize: 'var(--fs-tag)' }}>{hint}</div>
     </div>
   );
 }
@@ -151,23 +154,23 @@ function PulseButton({ label, hint, onPress }: { label: string; hint?: string; o
     <button
       type="button"
       onClick={onPress}
-      className="rounded border border-[var(--hmi-rule)] bg-[var(--hmi-surface)] px-2 py-1 text-left transition-colors hover:border-[var(--hmi-rule-strong)] hover:bg-[var(--btn-face)] active:bg-[var(--btn-face-hover)]"
+      className="rounded border border-[var(--hmi-rule)] bg-[var(--hmi-surface)] px-2 py-2 text-left transition-colors hover:border-[var(--hmi-rule-strong)] hover:bg-[var(--btn-face)] active:bg-[var(--btn-face-hover)]"
     >
-      <div className="text-[11px] text-[var(--text-value)]">{label}</div>
-      {hint && <div className="font-mono text-[9px] text-[var(--text-tag)]">{hint}</div>}
+      <div style={{ fontSize: 'var(--fs-label)' }} className="text-[var(--text-value)]">{label}</div>
+      {hint && <div className="font-mono text-[var(--text-tag)]" style={{ fontSize: 'var(--fs-tag)' }}>{hint}</div>}
     </button>
   );
 }
 
 function StatusChip({ label, hint, on }: { label: string; hint?: string; on: boolean }) {
   return (
-    <div className="flex items-center justify-between gap-2 rounded border border-[var(--hmi-rule)] bg-[var(--hmi-surface)] px-2 py-1">
+    <div className="flex items-center justify-between gap-2 rounded border border-[var(--hmi-rule)] bg-[var(--hmi-surface)] px-2 py-1.5">
       <span className="flex flex-col leading-tight">
-        <span className="text-[11px] text-[var(--text-value)]">{label}</span>
-        {hint && <span className="font-mono text-[9px] text-[var(--text-tag)]">{hint}</span>}
+        <span style={{ fontSize: 'var(--fs-label)' }} className="text-[var(--text-value)]">{label}</span>
+        {hint && <span className="font-mono text-[var(--text-tag)]" style={{ fontSize: 'var(--fs-tag)' }}>{hint}</span>}
       </span>
       <span
-        className={`h-2 w-2 shrink-0 rounded-full ${
+        className={`h-2.5 w-2.5 shrink-0 rounded-full ${
           on ? 'bg-[var(--text-value)]' : 'bg-[var(--btn-face-hover)]'
         }`}
       />
@@ -177,12 +180,12 @@ function StatusChip({ label, hint, on }: { label: string; hint?: string; on: boo
 
 function ReadoutChip({ label, hint, value }: { label: string; hint?: string; value: string }) {
   return (
-    <div className="flex items-center justify-between gap-2 rounded border border-[var(--hmi-rule)] bg-[var(--hmi-surface)] px-2 py-1">
+    <div className="flex items-center justify-between gap-2 rounded border border-[var(--hmi-rule)] bg-[var(--hmi-surface)] px-2 py-1.5">
       <span className="flex flex-col leading-tight">
-        <span className="text-[11px] text-[var(--text-value)]">{label}</span>
-        {hint && <span className="font-mono text-[9px] text-[var(--text-tag)]">{hint}</span>}
+        <span style={{ fontSize: 'var(--fs-label)' }} className="text-[var(--text-value)]">{label}</span>
+        {hint && <span className="font-mono text-[var(--text-tag)]" style={{ fontSize: 'var(--fs-tag)' }}>{hint}</span>}
       </span>
-      <span className="tabular font-mono text-[12px] text-[var(--text-label)]">{value}</span>
+      <span className="tabular font-mono text-[var(--text-label)]" style={{ fontSize: 'var(--fs-value-sm)' }}>{value}</span>
     </div>
   );
 }
@@ -190,8 +193,8 @@ function ReadoutChip({ label, hint, value }: { label: string; hint?: string; val
 function Section({ title, cols = 2, children }: { title: string; cols?: 2 | 3; children: React.ReactNode }) {
   return (
     <div className="mb-3 break-inside-avoid rounded border border-[var(--hmi-rule)] bg-[var(--hmi-surface)] p-1.5">
-      <h3 className="mb-1 text-[10px] font-medium uppercase tracking-wide text-[var(--text-tag)]">{title}</h3>
-      <div className={`grid gap-1 ${cols === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>{children}</div>
+      <h3 style={{ fontSize: 'var(--fs-header)' }} className="mb-1 font-medium uppercase tracking-wide text-[var(--text-tag)]">{title}</h3>
+      <div className={`grid gap-1.5 ${cols === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>{children}</div>
     </div>
   );
 }
@@ -239,7 +242,10 @@ export default function ManualOverridePanel({ disabled, onChange, readback, live
   return (
     <div className="flex flex-col gap-2">
       {disabled && (
-        <div className="rounded border border-[var(--alm-p2)] bg-[var(--hmi-surface)] px-2 py-1 text-[11px] text-[var(--alm-p2)]">
+        <div
+          className="rounded border border-[var(--alm-p2)] bg-[var(--hmi-surface)] px-2 py-1 text-[var(--alm-p2)]"
+          style={{ fontSize: 'var(--fs-label)' }}
+        >
           OPC UA connected — the PLC is driving. These are read-only indicators.
         </div>
       )}

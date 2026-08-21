@@ -14,6 +14,9 @@ interface Props {
   onOpcDisconnect: () => void;
   watchdogStale: boolean;
   opcError: string | null;
+  theme: 'light' | 'dark' | 'cool' | 'legacy';
+  onCycleTheme: () => void;
+  onOpenTrends: () => void;
 }
 
 // 36px toolbar (§9 [C]) — connection state is a 6px square, not a circle,
@@ -36,6 +39,9 @@ export default function Toolbar({
   onOpcDisconnect,
   watchdogStale,
   opcError,
+  theme,
+  onCycleTheme,
+  onOpenTrends,
 }: Props) {
   return (
     <div
@@ -71,6 +77,9 @@ export default function Toolbar({
       <button type="button" onClick={onReset} className="hmi-btn">
         Reset
       </button>
+      <button type="button" onClick={onOpenTrends} className="hmi-btn">
+        Engineering Trends
+      </button>
 
       <div className="ml-auto flex items-center gap-2">
         <svg width={6} height={6}>
@@ -103,6 +112,14 @@ export default function Toolbar({
         )}
         {watchdogStale && <span style={{ fontSize: 'var(--fs-tag)', color: 'var(--alm-p1)' }}>watchdog stale</span>}
         {opcError && <span style={{ fontSize: 'var(--fs-tag)', color: 'var(--alm-p1)' }}>{opcError}</span>}
+        <button
+          type="button"
+          onClick={onCycleTheme}
+          title="Cycle theme (light / cool / dark). Ctrl+Shift+L for legacy A/B."
+          className="hmi-btn"
+        >
+          theme: {theme}
+        </button>
       </div>
     </div>
   );

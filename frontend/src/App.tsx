@@ -1,23 +1,23 @@
 import { useEffect, useState } from 'react';
 import { useSimState } from './hooks/useSimState';
-import { useTheme } from './hooks/useTheme';
-import { useAlarmEvents } from './hooks/useAlarmEvents';
+import { useTheme, type Theme } from './hooks/useTheme';
 import AppShellLegacy from './AppShellLegacy';
 import OpcuaSettingsModal from './components/OpcuaSettingsModal';
 import PidDiagram from './components/PidDiagram';
+import StageDetailStrip from './components/StageDetailStrip';
 import Titlebar from './components/Titlebar';
-import AlarmBanner from './components/AlarmBanner';
+import TrendWorkspace from './components/TrendWorkspace';
 import Toolbar from './components/Toolbar';
 import DriverStrip from './components/DriverStrip';
 import RightDock from './components/RightDock';
 import type { AlarmTable } from './lib/pid';
 
-// New (ISA-101) shell: custom titlebar, alarm banner, toolbar, mimic +
+// New (ISA-101) shell: custom titlebar, toolbar, mimic +
 // right dock, driver strip (§9). AppShellLegacy.tsx (frozen) is the true
 // pre-restyle comparison behind Ctrl+Shift+L.
-function AppShellNew() {
+function AppShellNew({ theme, setTheme }: { theme: Theme; setTheme: (t: Theme) => void }) {
   const {
-    status, tags, flows, valves, cmdEcho, boundary, simInsight, opcua, simTime, running,
+    status, tags, flows, valves, cmdEcho, boundary, opcua, simTime, running,
     sendCmd, sendRun, sendRaw, subscribe,
   } = useSimState();
   const [resetMode, setResetMode] = useState<'blown_down' | 'pressurised'>('blown_down');
@@ -25,8 +25,7 @@ function AppShellNew() {
   const [opcEndpoint, setOpcEndpoint] = useState('');
   const [opcBusy, setOpcBusy] = useState(false);
   const [opcSettingsOpen, setOpcSettingsOpen] = useState(false);
-
-  const { summary, unackedCount, highestUnacked, ack } = useAlarmEvents(tags, alarms, simTime);
+  const [trendsOpen, setTrendsOpen] = useState(false);
 
   useEffect(() => {
     fetch('/api/config')
@@ -68,7 +67,6 @@ function AppShellNew() {
       style={{ backgroundColor: 'var(--hmi-canvas)', color: 'var(--text-value)' }}
     >
       <Titlebar />
-      <AlarmBanner highest={highestUnacked} unackedCount={unackedCount} onAck={ack} />
       <Toolbar
         status={status}
         simTime={simTime}
@@ -85,20 +83,24 @@ function AppShellNew() {
         onOpcDisconnect={doOpcDisconnect}
         watchdogStale={opcConnected && opcua.watchdog_ok === false}
         opcError={opcua.error ?? null}
+        theme={theme}
+        onCycleTheme={() => setTheme(theme === 'light' ? 'cool' : theme === 'cool' ? 'dark' : 'light')}
+        onOpenTrends={() => setTrendsOpen(true)}
       />
 
       <div className="flex min-h-0 flex-1">
-        <div className="min-w-0 flex-1 overflow-hidden p-2">
-          <PidDiagram
-            tags={tags} flows={flows} valves={valves} alarms={alarms} cmdEcho={cmdEcho} simInsight={simInsight}
-            stale={status !== 'connected'}
-          />
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+          {/* mimic pane / detail strip: 60/40 split (§9 restyle Task 3) —
+              the strip is a fixed-height reservation off the bottom, not a
+              flex-basis fight, so it can't get squeezed by mimic content. */}
+          <div className="min-h-0 overflow-hidden p-2" style={{ flex: '3 1 0' }}>
+            <PidDiagram tags={tags} flows={flows} valves={valves} cmdEcho={cmdEcho} />
+          </div>
+          <div className="min-h-0 overflow-hidden" style={{ flex: '2 1 0', borderTop: 'var(--w-hairline) solid var(--hmi-rule)' }}>
+            <StageDetailStrip tags={tags} cmdEcho={cmdEcho} alarms={alarms} stale={status !== 'connected'} />
+          </div>
         </div>
         <RightDock
-          summary={summary}
-          ack={ack}
-          subscribe={subscribe}
-          alarms={alarms}
           sendCmd={sendCmd}
           readback={cmdEcho}
           liveTags={tags}
@@ -118,11 +120,12 @@ function AppShellNew() {
           onSaved={(endpoint) => setOpcEndpoint(endpoint)}
         />
       )}
+      {trendsOpen && <TrendWorkspace subscribe={subscribe} limits={alarms} onClose={() => setTrendsOpen(false)} />}
     </div>
   );
 }
 
 export default function App() {
-  const [theme] = useTheme();
-  return theme === 'legacy' ? <AppShellLegacy /> : <AppShellNew />;
+  const [theme, setTheme] = useTheme();
+  return theme === 'legacy' ? <AppShellLegacy /> : <AppShellNew theme={theme} setTheme={setTheme} />;
 }

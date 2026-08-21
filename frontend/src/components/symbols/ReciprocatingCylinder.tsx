@@ -8,6 +8,7 @@ export default function ReciprocatingCylinder({
   rpm,
   width = 144,
   height = 134,
+  minUnits = 0,
 }: {
   x: number;
   y: number;
@@ -15,6 +16,8 @@ export default function ReciprocatingCylinder({
   rpm: number;
   width?: number;
   height?: number;
+  /** Typography floor (Task 4) — see GateValve's `minUnits`. */
+  minUnits?: number;
 }) {
   const running = rpm > 5;
   const w = width;
@@ -34,13 +37,13 @@ export default function ReciprocatingCylinder({
       {/* suction (top) / discharge (bottom) valve nubs */}
       <path d={`M${-14},${-h / 2} L${14},${-h / 2} L${8},${-h / 2 - 12} L${-8},${-h / 2 - 12} Z`} fill="var(--equip-fill)" stroke={stroke} strokeWidth={1} />
       <path d={`M${-14},${h / 2} L${14},${h / 2} L${8},${h / 2 + 12} L${-8},${h / 2 + 12} Z`} fill="var(--equip-fill)" stroke={stroke} strokeWidth={1} />
-      <text y={-10} textAnchor="middle" fontSize={28} fontWeight={500} fill="var(--text-label)">
+      <text y={-10} textAnchor="middle" fontSize={Math.max(28, minUnits)} fontWeight={500} fill="var(--text-label)">
         {label}
       </text>
-      <text y={26} textAnchor="middle" fontSize={17} fontWeight={500} letterSpacing={0.6} fill="var(--text-label)">
+      <text y={26} textAnchor="middle" fontSize={Math.max(17, minUnits)} fontWeight={500} letterSpacing={0.6} fill="var(--text-label)">
         {running ? 'RUN' : 'OFF'}
       </text>
-      <text y={101} textAnchor="middle" fontSize={15} fill="var(--text-tag)">
+      <text y={101} textAnchor="middle" fontSize={Math.max(15, minUnits)} fill="var(--text-tag)">
         cylinder
       </text>
     </g>

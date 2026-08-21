@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 
-export type Theme = 'light' | 'dark' | 'legacy';
+export type Theme = 'light' | 'dark' | 'cool' | 'legacy';
 
 const STORAGE_KEY = 'hmi-theme';
+const THEMES: Theme[] = ['light', 'dark', 'cool', 'legacy'];
 
 function initialTheme(): Theme {
   const stored = localStorage.getItem(STORAGE_KEY);
-  return stored === 'light' || stored === 'dark' || stored === 'legacy' ? stored : 'light';
+  return (THEMES as string[]).includes(stored ?? '') ? (stored as Theme) : 'light';
 }
 
 /** Applies data-theme to <html> and wires Ctrl+Shift+L to flip light <-> legacy

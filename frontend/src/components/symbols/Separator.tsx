@@ -9,6 +9,7 @@ export default function Separator({
   height = 134,
   energized = true,
   level,
+  minUnits = 0,
 }: {
   x: number;
   y: number;
@@ -17,6 +18,8 @@ export default function Separator({
   height?: number;
   energized?: boolean;
   level?: number;
+  /** Typography floor (Task 4) — see GateValve's `minUnits`. */
+  minUnits?: number;
 }) {
   const w = width;
   const h = height;
@@ -62,7 +65,7 @@ export default function Separator({
           strokeWidth={1.5}
         />
       )}
-      <text y={h / 2 + bootH + 18} textAnchor="middle" fontSize={15} fill="var(--text-label)">
+      <text y={h / 2 + bootH + 18} textAnchor="middle" fontSize={Math.max(15, minUnits)} fill="var(--text-label)">
         {label}
       </text>
     </g>
