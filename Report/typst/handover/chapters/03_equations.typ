@@ -2,12 +2,12 @@
 
 = Governing Equations <sec-equations>
 
-This section states the equations actually implemented in `backend/app/physics.py`, not what a
+This section states the equations implemented in the simulator process model, not what a
 textbook first-principles treatment would ideally use. Every simplification made relative to a
 rigorous treatment is stated explicitly, with its justification, in @sec-limitations. All
 pressures below are absolute Pa unless noted gauge; all temperatures are Kelvin; all mass
-flows are kg/s, with no exceptions, at the physics-module boundary (`tags.py` converts to
-psig/°F only at the instrumentation boundary that crosses to the PLC).
+flows are kg/s, with no exceptions, throughout the internal process model (the instrumentation
+layer converts to psig/°F only at the boundary that crosses to the PLC).
 
 == Symbols
 
@@ -31,14 +31,19 @@ psig/°F only at the instrumentation boundary that crosses to the PLC).
 
 $ rho = P / (R_(s p) T) $ <eq-density>
 
+*What this means:* converts the current pressure and temperature into gas density, which feeds
+directly into the compressor- and valve-flow calculations below (@eq-mcomp, @eq-orifice).
+
 Applied at three points: suction ($rho_s$), discharge ($rho_d$, using the aftercooler
 temperature $T_(a c)$), and the supply source ($rho_(s r c)$).
 
-*Simplification: compressibility factor $Z=1$.* A real natural gas at 1150 psig and 245 °F has
-$Z approx 0.85$–0.90, so densities computed by @eq-density are optimistic by roughly 10–15% at
-the discharge end relative to a real-gas treatment. This is acceptable because the model's
-purpose is PLC logic testing, not a performance guarantee — and because no gas composition
-analysis was supplied to compute an actual $Z$-factor.
+*Simplification: compressibility factor $Z=1$.* For illustrative comparison only, representative
+natural-gas compressibility factors at similar conditions (roughly 1150 psig, 245 °F) are commonly
+cited in the range $Z approx 0.85$–0.90; on that general basis, densities computed by @eq-density
+would be optimistic by roughly 10–15% at the discharge end relative to a real-gas treatment. No
+project-specific gas composition analysis was supplied to compute an actual $Z$-factor for this
+model, so this comparison is general engineering context, not project data. This simplification is
+acceptable because the model's purpose is PLC logic testing, not a performance guarantee.
 
 == 2. Stage pressure distribution — equal ratio
 
@@ -46,11 +51,16 @@ $ r_(t o t) = P_d / P_s, quad r_(s t g) = r_(t o t)^(1/3) $ <eq-ratio>
 
 $ P_1 = min(P_s dot r_(s t g),  P_d), quad P_2 = min(P_1 dot r_(s t g),  P_d) $ <eq-interstage>
 
+*What this means:* uses the two dynamically simulated pressures — suction and final discharge —
+to algebraically calculate the two intermediate stage pressures under the configured equal-ratio
+assumption; the interstage values are derived outputs, not independently integrated states (see
+@sec-worked-example).
+
 At the design point: $r_(t o t) = 26.1$, $r_(s t g) = 2.969$, giving 30 → 117 → 377 → 1149 psig.
 
-*Code guard not present in the reference implementation.* The $min(dot.c, P_d)$ clamp on $P_1$
-and $P_2$ is a deviation this application makes from both its own internal lite reference
-(`docs/compressor_lite_reference.py`) and the predecessor Simulink model, neither of which
+*Guard not present in the reference model.* The $min(dot.c, P_d)$ clamp on $P_1$
+and $P_2$ is a deviation this application makes from both its own internal lightweight reference
+model and the predecessor Simulink model, neither of which
 clamps the interstage pressures. It exists only to prevent interstage readings from briefly
 exceeding final discharge during startup or blowdown transients, and has no effect at steady
 state. $r_(t o t)$ is separately clamped to $[1, 30]$.
@@ -58,6 +68,9 @@ state. $r_(t o t)$ is separately clamped to $[1, 30]$.
 == 3. Volumetric efficiency — clearance re-expansion
 
 $ V E = 1 - C(r_(s t g)^(1/n) - 1) - L_(s l i p) $ <eq-ve>
+
+*What this means:* reduces the theoretical swept cylinder displacement to the fraction actually
+filled with fresh suction gas, after accounting for clearance re-expansion and modelled leakage.
 
 The classical reciprocating-compressor volumetric-efficiency equation: gas trapped in the
 clearance volume at discharge pressure must re-expand back to suction pressure before the
@@ -79,6 +92,9 @@ $ "gate" = cases(
   0 & "otherwise",
 ) $ <eq-gate>
 
+*What this means:* calculates how much gas mass the running compressor transfers from suction
+toward discharge, per second.
+
 Swept volume per revolution × suction density × volumetric efficiency × revolutions per
 second, giving kg/s.
 
@@ -90,6 +106,10 @@ therefore no flow and no compression heat.
 == 5. Valve mass flow — simplified orifice
 
 $ dot(m) = K dot Z/100 dot sqrt(rho dot max(Delta P,  0)) $ <eq-orifice>
+
+*What this means:* calculates flow through each simplified restriction (supply, bypass, process,
+blowdown) from that valve's opening, the relevant gas density, and the pressure difference across
+it.
 
 Derived from the incompressible orifice equation $dot(m) = C_d A sqrt(2 rho Delta P)$, with the
 discharge coefficient, the flow area, and the factor of 2 all folded into a single lumped
@@ -117,8 +137,10 @@ choked vent, though this has not been quantified.
 
 == 6. Vessel pressure dynamics — mass balance at constant volume
 
-This is the most important equation pair in the model. From the ideal gas law at fixed volume
-and temperature, differentiating gives:
+This is the most important equation pair in the model. *What this means:* converts net gas
+accumulation (inflow minus outflow) in the suction and discharge volumes into changing suction and
+discharge pressure — this is the mechanism worked through in full in @sec-worked-example. From
+the ideal gas law at fixed volume and temperature, differentiating gives:
 
 $ (d P)/(d t) = (R_(s p) T)/V sum dot(m) $ <eq-massbalance>
 
@@ -152,6 +174,9 @@ noted below.
 
 $ T_d = T_(i n) dot r_(s t g)^(e_T), quad e_T = (n-1)/n = 0.2693/1.2693 = 0.2122 $ <eq-td>
 
+*What this means:* calculates the compression discharge-temperature target from the stage
+pressure ratio and inlet temperature.
+
 Applied per cylinder with different inlet temperatures — the model tracks two
 discharge-temperature lag states, covering the first stage and lumping the second and third
 stages together:
@@ -181,7 +206,7 @@ approximates but does not derive from first principles.
 *Cylinders 3 and 4 read identically to cylinder 2.* Because the model has only two
 discharge-temperature lag states covering three compression stages, `TT_2006` and `TT_2007`
 would read bit-for-bit identical to `TT_2005` without an added static per-cylinder calibration
-offset (`config.yaml`: `instrumentation.cyl_temp_offset_F`, currently 0, 0, +3, −2 °F for
+offset (a configurable value, currently 0, 0, +3, −2 °F for
 cylinders 1–4) applied at the instrumentation boundary — no two real transmitters on nominally
 identical cylinders agree that closely. This offset is cosmetic realism, not a modelled
 physical difference between the cylinders.
@@ -189,6 +214,9 @@ physical difference between the cylinders.
 == 8. Valve position dynamics — rate-limited actuator
 
 $ (d Z)/(d t) = "sat"(K_(v a l v e)(Z_(t a r g e t) - Z),  -R_(c l o s e),  +R_(o p e n)), quad 0 <= Z <= 100 $ <eq-valve>
+
+*What this means:* prevents commanded valves from changing position instantaneously, applying
+the configured opening/closing rates below instead.
 
 $K_(v a l v e) = 20$ (a proportional gain on position error, matching the predecessor Simulink
 model's `gain(20)` block) feeding a rate limiter: for any error larger than
@@ -207,15 +235,21 @@ approach is smooth rather than a hard stop exactly at the target.
   )
 )
 
-The fail-open/fail-closed initial conditions are the safety design: on loss of instrument air
-or signal, the ESDs shut and the blowdown opens, venting the package. This is why an
-unconditional shutdown and a normal stop end in completely different physical states.
+The simulator implements the following configured fail directions: the suction and discharge ESD
+valves close and the blowdown valve opens when their commands are de-energised. These configured
+directions determine the simulated pressure response during shutdown and link-loss conditions
+(@opc-connection, "What Happens on Link Loss") — this is why an unconditional shutdown and a
+normal stop end in different simulated pressure states. Where these fail directions are also the
+approved project safety design is a matter for the applicable project safety documentation, not
+something this report establishes.
 
 == 9. First-order lag states
 
 $ (d x)/(d t) = (x_(t a r g e t) - x)/tau $ <eq-lag>
 
-Used for every quantity with real thermal or hydraulic inertia:
+Used for quantities that the simulator represents using a first-order lag to approximate delayed
+thermal or hydraulic response; the time constants below are configured simulation parameters, not
+measurements of physical thermal or hydraulic inertia (@sec-limitations):
 
 #data-table(
   ([State], [Target], [$tau$ (s)], [Initial condition]),
@@ -239,16 +273,18 @@ $ P_(o i l","t a r g e t) = cases(
 ($P_(o i l","p r e l u b e)$), 0 psig (relative) when off. Pressure scales linearly with speed
 up to 850 rpm, then saturates — a pressure-relief-valve characteristic.
 
-*Consequence: a real transient dip during startup crossover.* Once $N$ exceeds 200 rpm, the
+*Consequence: a modelled transient dip during startup crossover.* Once $N$ exceeds 200 rpm, the
 running branch takes over at $8.27 times 10^5 "Pa" dot N\/850$, which is momentarily *below*
-the 55 psig prelube target until speed builds — a real package shows the same dip, and it is
-why the sequencer's oil-pressure permissive check must wait on a genuine physical transient
-rather than a simple threshold-crossing at $t=0$.
+the 55 psig prelube target until speed builds. The implemented model exhibits this temporary dip
+during the transition from the prelube branch to the running-pressure branch; actual machine
+behaviour depends on the physical lubrication system and has not been validated here. This
+modelled transient is why the sequencer's oil-pressure permissive check must wait on a
+genuine simulated transient rather than a simple threshold-crossing at $t=0$.
 
 A separate fault-injection path ("slow lube build") multiplies the effective time constant on
 this lag from 3 s to 900 s to deliberately delay the prelube permissive past a PLC's
-oil-pressure fault timer — see the companion `DISCREPANCIES.md` for how this value differs
-from the predecessor model.
+oil-pressure fault timer. The predecessor model used a 90 s time constant for the same fault;
+this model uses 900 s to more reliably exceed a typical PLC oil-pressure fault timer.
 
 == 11. Cooling — fan-count lookup
 

@@ -32,9 +32,10 @@ editable even while a PLC is connected.
    jacket-water temperature (TT_2014), and engine oil pressure (PT_1007).])
 
 The Tier 1 operator inputs — unit shutdown, local/remote stop, remote ESD, CAT
-alarm/fail-SD — stay live regardless of PLC connection state, matching the real
-unit where these are hardwired straight into the PLC's I/O rather than routed
-through an upstream system.
+alarm/fail-SD — stay live regardless of PLC connection state. This reflects the
+implemented design assumption that these inputs are hardwired straight into the PLC's I/O rather
+than routed through an upstream system, consistent with the reference project this simulator was
+adapted from.
 
 #fig("/images/features/fig24_hmi_operator_ecu_inputs_always_live.png",
   [Operator / ECU inputs (always live): unit shutdown (PB_5001), local stop

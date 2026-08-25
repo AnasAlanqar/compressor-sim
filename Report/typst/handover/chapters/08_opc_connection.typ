@@ -11,28 +11,34 @@ shows this state).
    blown down, all suction/discharge ESD and blowdown valves in their fail-safe
    position, and the Overrides dock open and editable on the right.])
 
-== The OPC UA Endpoint in `config.yaml`
+== The OPC UA Endpoint
 
-The endpoint is set under `opcua:` in the editable config
-(`%LOCALAPPDATA%\CompressorSim\config.yaml`, @installation):
+The OPC UA target address is an editable simulator setting, defined in the application
+configuration described in @installation. The configurable connection settings are:
 
-```yaml
-opcua:
-  endpoint: "opc.tcp://localhost:4840"
-  namespace_uri: "urn:symbolset:Device:Application:Symbol Set"
-  browse_path_prefix: ["{ns}:Symbol Set", "{ns}:GVL_PLC"]
-  watchdog_timeout_s: 2.0
-  node_addressing: "auto"
-```
+#data-table(
+  ([Setting], [Purpose]),
+  (
+    ([Endpoint], [The OPC UA server address to connect to, e.g. `opc.tcp://localhost:4840`]),
+    ([Symbol-set identifier], [Identifies the PLC's exposed symbol set for tag discovery — needed
+      only for non-standard servers]),
+    ([Browse path prefix], [Where in the server's address space to look for tags — needed only
+      for non-standard servers]),
+    ([Link watchdog timeout], [How long to wait without a heartbeat before declaring the link
+      failed — 2.0 s by default]),
+    ([Tag-addressing mode], [`auto` (the default) searches the server's whole address space for
+      the simulator's known tag names]),
+  )
+)
 
-For a PLC on the same machine, leave `endpoint` at `opc.tcp://localhost:4840`. For a PLC on
+For a PLC on the same machine, leave the endpoint at `opc.tcp://localhost:4840`. For a PLC on
 another device — a networked CODESYS PC or a physical panel — change the host, e.g.
-`opc.tcp://172.20.10.2:4840`. `node_addressing: "auto"` (the default) searches the server's whole
-address space for the simulator's known tag names and needs no `namespace_uri` or
-`browse_path_prefix` configuration for a standard CODESYS target; those two keys, and
-`node_id_pattern`, exist only for non-standard servers or as a manual override. The app needs to
-be restarted after any change to `endpoint` (or any other `opcua:` key) in `config.yaml`, since
-there is no live endpoint-switching control in the current UI.
+`opc.tcp://172.20.10.2:4840`. The default automatic tag-addressing mode needs no symbol-set
+identifier or browse-path-prefix configuration for a standard CODESYS target; those settings, and
+the optional node-ID pattern override, exist only for non-standard servers or as a manual
+override. The app needs to be restarted after any change to the endpoint (or any other connection
+setting) in the application configuration, since there is no live endpoint-switching control in
+the current UI.
 
 == Opening the Connect to a PLC Dialog
 
@@ -121,10 +127,14 @@ default), the link is declared failed and every command tag reverts to its docum
 `CMD_4005`, `CMD_4006`, `CMD_4008`, `CMD_4009`, `CMD_4010`, `CMD_4001`, `CMD_4003`, `CMD_4011`,
 `CMD_4012`.
 
-This mirrors a real fail-safe package: on loss of signal, the ESDs shut and the blowdown opens,
-venting the unit (@sec-process's mass-accumulation asymmetry governs how that unfolds). Operator
-pushbuttons (`PB_5001`, `PB_5003`, `PB_5004`, `ESD_5002`) stay live and unaffected by link state,
-since on the real unit these are hardwired to the PLC, not routed through this link.
+This reflects the implemented fail-safe command polarity documented in @sec-plc-interface, "Command
+Polarity": on loss of signal, the ESDs shut and the blowdown opens, venting the unit
+(@sec-process's mass-accumulation asymmetry governs how that unfolds). Operator
+pushbuttons (`PB_5001`, `PB_5003`, `PB_5004`, `ESD_5002`) remain live and unaffected by simulator
+OPC UA link state. In the simulator architecture these are represented as always-live PLC-facing
+inputs rather than simulator command outputs, so they are not subject to the fail-value mapping
+above; whether the real package wires these hard to the PLC independent of any supervisory link is
+a matter for the applicable project wiring documentation.
 
 == The CODESYS Side: Bringing the Runtime Online
 
@@ -176,13 +186,13 @@ executing and not just downloaded.
    green in the Devices tree.])
 
 The full CODESYS engineering-environment procedure — installing the runtime, configuring the
-project, the complete login sequence — is documented in the predecessor report,
-`Report/1st_draft_report.pdf`, Part II §0.10, and is not reproduced here.
+project, the complete login sequence — is documented in the predecessor project's handover
+report and is not reproduced here.
 
 == Symbol Publishing and Device Security Settings
 
 If the target is a CODESYS soft-PLC, its Symbol Configuration needs to be published for the
-connection to work — the simulator's `node_addressing: "auto"` mode locates tags by browsing the
+connection to work — the simulator's default automatic tag-addressing mode locates tags by browsing the
 server's exposed symbol set, and an unpublished symbol set means none of the compressor tags are
 visible over OPC UA even though the application logic is running correctly. A Download to the
 PLC regenerates its address space and invalidates any node references the client cached from
@@ -234,7 +244,7 @@ reachable, these two dialogs are the first place to check.
 
 == Verifying the Link: Forcing a Tag from the PLC Side <verify-link>
 
-The clearest proof the OPC UA link is actually live — not just "connected" in
+The clearest confirmation that the OPC UA link is actually live — not just "connected" in
 name — is changing a value in CODESYS and watching it move on the simulator's HMI.
 `CMD_4005` (CAT engine start command) in the `GVL_PLC` global variable list is a
 convenient one to force, since it drives a visible indicator on the P&ID.
@@ -249,8 +259,8 @@ convenient one to force, since it drives a visible indicator on the P&ID.
 
 Forcing `CMD_4005` to TRUE in CODESYS (right-click the value → Force Value, or set
 it directly in a running application) writes the change to the PLC's own memory —
-from there the simulator picks it up over the OPC UA link exactly as it would from
-real control logic.
+from there the simulator picks it up over the OPC UA link the same way it would from
+any value the connected PLC program writes to that tag.
 
 #fig("/images/opc/fig17_codesys_gvl_plc_cat_start_true.png",
   [CMD_4005 forced to TRUE in the CODESYS GVL_PLC watch view.])

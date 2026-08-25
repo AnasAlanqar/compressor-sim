@@ -66,8 +66,10 @@
 
   // ---- cover page --------------------------------------------------
   set page(paper: "us-letter", margin: (x: 1in, top: 1in, bottom: 1in), numbering: none)
-  v(2.2in)
+  v(1.8in)
   align(center)[
+    #image("/images/maikana-logo.png", width: 1.6in)
+    #v(0.4in)
     #text(size: 30pt, weight: "bold", font: "Latin Modern Roman")[#title]
     #v(6pt)
     #text(size: 15pt, fill: muted, font: "Latin Modern Roman")[#subtitle]

@@ -20,7 +20,7 @@ still alive before refusing to start, so this should self-heal). If it persists,
 Manager, end any `CompressorSim.exe` process, and relaunch.
 
 *OPC UA endpoint unreachable.* The Connect to a PLC dialog will not reach "Connected." Confirm
-the endpoint in `config.yaml` (@opc-connection) is correct, that the target CODESYS runtime or
+the endpoint in the application configuration (@opc-connection) is correct, that the target CODESYS runtime or
 panel is actually running its OPC UA server, and that the machine is reachable on the network
 (for a remote target, try _Scan my network_ to confirm it is visible at all). `app.log` records
 the underlying connection failure.

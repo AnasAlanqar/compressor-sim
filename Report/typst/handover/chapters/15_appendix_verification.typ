@@ -2,7 +2,15 @@
 
 #heading(numbering: none, outlined: true)[Appendix C --- Verification Detail] <app-verification>
 
-*Design-point acceptance* (`test_design_point.py`, 18 tests) verifies, from a pressurised initial
+#note(label: "SOFTWARE VERIFICATION, NOT PHYSICAL VALIDATION")[
+  The checks below verify the implemented model against the configured design-point acceptance
+  criteria and software invariants. They confirm the simulator does what this
+  report says it does; they are not a comparison against measured performance of a physical
+  compressor (@sec-purpose, "Basis and Validation Status").
+]
+
+The Design-Point Verification Suite (18 automated checks) checks the implemented model
+against the configured design-point acceptance criteria, from a pressurised initial
 condition run for 600 s of simulated time: all eight design-point values (@sec-constants) against
 their stated tolerances; mass-balance closure on both vessels under $1 times 10^(-3)$ kg/s (the
 primary acceptance criterion); supply flow equals delivery flow at steady state; all three stage
@@ -11,7 +19,7 @@ pressures remain at or above atmospheric; gas is heated by compression, never co
 Inf appears anywhere in state or algebraic outputs; valve positions stay within 0-100%; all flows
 are non-negative; and steady-state drift stays under 2 psi over the final 50 s of a 600 s run.
 
-*Transient / dynamic validation* (`test_transient.py`, 27 tests) covers, among other checks: cold
+*The Transient / Dynamic Verification Suite* (27 automated checks) covers, among other checks: cold
 start stays at atmospheric while stopped; pressurisation toward the source boundary never exceeds
 it; bypass and blowdown valve open/close timing against their configured rates (within a few
 percent); speed ramp rates in both directions, including a case-specific note on why the average
@@ -28,12 +36,12 @@ out-of-range valve positions); and a final check that the converged final discha
 insensitive (spread under 1.0 psi) to integration timestep across 5/20/50 ms.
 
 *The remaining five suites* cover: fault injection (each fault in @sec-faults actually produces
-its documented tag-level effect); tag mapping (the conversion between SI physics-module units and
-psig/°F transmitter values, including range clamping); the OPC UA link (connection, disconnection,
+its documented tag-level effect); tag mapping (the conversion between internal SI process-model
+units and psig/°F transmitter values, including range clamping); the OPC UA link (connection, disconnection,
 watchdog timeout, and fail-value application, @opc-connection); and command-locking behaviour
 (Overrides tiles correctly becoming read-only once a PLC is connected, and correctly reverting to
 editable on disconnect).
 
-The physics loop itself integrates at a fixed 20 ms step using fourth-order Runge-Kutta; the
-timestep-insensitivity test above is the direct evidence that this choice does not materially
+The process model itself integrates at a fixed 20 ms step using fourth-order Runge-Kutta; the
+timestep-insensitivity check above is the direct evidence that this choice does not materially
 affect the converged values reported elsewhere in this document.

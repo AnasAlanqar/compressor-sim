@@ -1,7 +1,5 @@
 #import "../../template.typ": *
 
-#part[Part II --- Using the Simulator]
-
 = Installation <installation>
 
 The application is distributed as a single zipped installer,
@@ -74,11 +72,19 @@ right are all visible and interactive before any OPC UA link is made.
   [Compressor Simulator on first launch: the ARIEL JGH/4 P&ID with the compressor
    train stopped and blown down, and the Overrides tool dock open on the right.]) <fig-hmi-stopped>
 
+#note(label: "VENDOR / MODEL REFERENCES ARE CONTEXT ONLY")[
+  Vendor and model references retained in legacy tags, drawings, or interface labels throughout
+  this report — for example the ARIEL P&ID above, and the "CAT"/ADEM-prefixed engine tags used in
+  @sec-plc-interface and Appendix A — identify the reference equipment context inherited from the
+  predecessor project only. They do not indicate that this simulator has been validated, endorsed,
+  or certified by those manufacturers.
+]
+
 == Where Things Live Once Installed
 
 #kv-table((
   ("App files", "%LOCALAPPDATA%\\Programs\\Compressor Simulator\\"),
-  ("Editable config", "%LOCALAPPDATA%\\CompressorSim\\config.yaml — not the bundled default installed with the app. This file is copied from the bundled default the first time the app runs; edit this copy to change the PLC endpoint or any other parameter. The app never touches its own bundled copy."),
+  ("Editable configuration", "The application configuration file in %LOCALAPPDATA%\\CompressorSim\\ — not the bundled default installed with the app. This configuration is copied from the bundled default the first time the app runs; edit this copy to change the PLC endpoint or any other parameter. The app never touches its own bundled default."),
   ("Logs", "%LOCALAPPDATA%\\CompressorSim\\logs\\app.log (rotates, keeps the last 3 files)"),
 ))
 

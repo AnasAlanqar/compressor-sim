@@ -3,8 +3,9 @@
 = PLC Development Roadmap <sec-roadmap>
 
 A recommended order of work for building the PLC application against this simulator, from first
-communications to a fully validated sequence. Nothing here is enforced by the simulator — it is a
-suggested path through the work, not a requirement.
+communications to a fully tested sequence. Nothing here is enforced by the simulator — it is a
+suggested path through the work, not a requirement. "Tested" here means exercised against this
+simulator's implemented model, not validated against the physical compressor (@sec-purpose).
 
 == Stage 1 --- Establish Communications
 
@@ -14,8 +15,8 @@ suggested path through the work, not a requirement.
 + Publish the CODESYS Symbol Configuration so the compressor tags are visible over OPC UA
   (@opc-connection, Symbol Publishing and Device Security Settings).
 + Connect the simulator to the runtime and confirm "Connected" in the header (@opc-connection).
-+ Force one safe PLC tag (e.g. `CMD_4005`) and observe the corresponding response in the
-  simulator (@verify-link).
++ Force one low-impact test command (e.g. `CMD_4005`) and observe the corresponding response in
+  the simulator (@verify-link).
 + Confirm simulator feedback (a measurement tag) reaches the PLC side, closing the loop in both
   directions.
 

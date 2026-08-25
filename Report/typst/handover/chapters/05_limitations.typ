@@ -32,7 +32,8 @@ Stated plainly, so nothing here needs to be discovered by inspection later.
      [This is the single largest fitted parameter in the model],
      [Any claim of validated fidelity to the reference machine — this is why the package is framed as a generic three-stage compressor throughout this document]),
     ([No PLC sequencer bundled with this application (unlike its Simulink/CODESYS predecessor)],
-     [Sequencing logic under test is supplied by the real PLC being validated, exactly as intended],
+     [Sequencing logic under test is supplied by the connected PLC; this simulator does not
+      provide a standalone sequencer],
      [Standalone demonstration of a full startup/shutdown sequence without an external PLC connected]),
   )
 )

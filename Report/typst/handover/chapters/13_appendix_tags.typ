@@ -54,7 +54,7 @@ Gaussian noise are available per tag, off by default (@sec-faults, Signal Freeze
   )
 )
 
-== Tier 2 Discrete Faults (not in the PN17481 I/O list — `docs/APP_SPEC.md` §4.8)
+== Tier 2 Discrete Faults (not in the PN17481 I/O list)
 
 #data-table(
   ([Tag], [Description]),
@@ -68,5 +68,4 @@ Gaussian noise are available per tag, off by default (@sec-faults, Signal Freeze
 )
 
 Alarm and trip setpoints (used only to colour the P&ID and draw trend lines — the simulator never
-evaluates them) live in `backend/config.yaml`'s `alarms:` block; the full extended-tag rationale
-is in `docs/APP_SPEC.md` §4.8.
+evaluates them) are configured alarm/trip display setpoints in the simulator configuration.

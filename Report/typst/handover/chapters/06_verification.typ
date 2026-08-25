@@ -2,10 +2,14 @@
 
 = Verification Summary <sec-verification>
 
-The physics module is exercised by *86 automated tests* across seven suites: design-point
+The process model is exercised by *86 automated checks* across seven suites: design-point
 acceptance (18), transient/dynamic behaviour (27), and five further suites covering fault
-injection, tag mapping, the OPC UA link, and command-locking behaviour. All 86 passed as of this
-report (`pytest tests/ -q`).
+injection, tag mapping, the OPC UA link, and command-locking behaviour. For the software version
+documented in this report, the automated verification suite returned 86/86 passing checks.
+These checks verify the implementation against its configured equations,
+configured design-point acceptance criteria, interface behaviour, fault mechanisms, tag mappings,
+and software invariants. They do not constitute validation against
+measured performance of a physical compressor.
 
 #data-table(
   ([Category], [What it checks], [Result]),
@@ -15,7 +19,7 @@ report (`pytest tests/ -q`).
       $< 1 times 10^(-3)$ kg/s on both vessels; stage ratios equal to $10^(-6)$; monotonic
       staging; no negative pressure/NaN/Inf; steady-state drift $< 2$ psi over 50 s],
      [Pass, 18/18]),
-    ([Transient / dynamic validation],
+    ([Transient / dynamic verification],
      [Valve/speed ramp-rate timing; coastdown time constant; load/unload direction; blowdown
       venting profile; oil-permissive timing (healthy and faulted); fault behaviour recovery;
       ESD-closed cooling; cooler-loss response],

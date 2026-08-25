@@ -19,13 +19,5 @@
      [Vendor performance data for the reference compressor and engine — currently absent]),
     ([Rod load and pulsation analysis],
      [*Explicitly out of scope for this simulator* — belongs in a dedicated mechanical study]),
-    ([Reconcile this application's lack of a bundled reference PLC sequencer against the predecessor rig's approach, if standalone demonstration becomes a requirement],
-     [A decision on whether that capability is needed, or remains the connected PLC's sole responsibility]),
-    ([Full-window Faults screenshots in place of the cropped panel captures used in @sec-interface],
-     [None beyond a recapture session]),
-    ([A second before/after OPC UA verification pair for an analog tag (@opc-connection currently demonstrates only a discrete tag, `CMD_4005`)],
-     [None beyond a recapture session]),
-    ([In-app "switch endpoint" UI, so the OPC UA target can be changed without hand-editing `config.yaml` and restarting],
-     [Front-end and config-reload implementation work]),
   )
 )

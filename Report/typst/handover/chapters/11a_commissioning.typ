@@ -4,14 +4,14 @@
 
 == First PLC Commissioning Test
 
-A small, safe, deterministic test to prove the complete signal path end to end before attempting
-the full compressor sequence. This is the same tag-forcing mechanism demonstrated in
+A controlled, deterministic interface check intended to confirm the tested signal path before
+attempting the full compressor sequence. This is the same tag-forcing mechanism demonstrated in
 @opc-connection, "Verifying the Link," generalised into a repeatable first-commissioning step.
 
 + Establish the OPC UA connection (@opc-connection) and confirm "Connected" in the header.
 + Verify `WD_6001` is incrementing and that expected feedback tags (e.g. `PS_2009`, `ST_2010`) are
   present and at their expected at-rest values.
-+ From the PLC, command one safe output --- `CMD_4005` is a convenient choice, since it drives a
++ From the PLC, command one low-impact test command --- `CMD_4005` is a convenient choice, since it drives a
   visible indicator on the P&ID and has no destructive effect on its own without the rest of the
   start permissive chain also being asserted.
 + Observe the corresponding response in the simulator HMI (or the Tags tab, @sec-interface).
@@ -23,8 +23,10 @@ the full compressor sequence. This is the same tag-forcing mechanism demonstrate
 + Compare the tag table on both sides --- the PLC's symbol/watch view and the simulator's Tags tab
   (@sec-interface) --- to confirm no tag is silently missing or mismatched.
 
-Passing this test proves the wiring, addressing, and OPC UA plumbing are correct. It does *not*
-prove the PLC's sequence logic is correct --- that is a separate validation step, below.
+Successful completion provides evidence that the tested OPC UA communication path, addressing, and
+tag exchange are functioning as intended for the signals checked. It does *not* establish
+correctness of the PLC's sequence logic or the complete PLC application --- that is a separate
+validation step, below.
 
 == Acceptance Test Checklist
 
@@ -32,7 +34,9 @@ prove the PLC's sequence logic is correct --- that is a separate validation step
   This checklist states what to *observe*, not what the "correct" PLC response must be in every
   case --- most of that is a project requirement this document has no authority to define. Where a
   specific response is not documented elsewhere in this report, the expected-response column says
-  so explicitly rather than inventing one.
+  so explicitly rather than inventing one. This checklist is a simulator interface/model test aid
+  for PLC development, not a substitute for the project's approved FAT/SAT procedure,
+  cause-and-effect documentation, shutdown philosophy, or control narrative.
 ]
 
 === Communications
@@ -70,7 +74,7 @@ prove the PLC's sequence logic is correct --- that is a separate validation step
   (
     ([Stage pressures rise correctly], [Monotonic staging matching @sec-plc-interface's "Normal Operating Expectations" table]),
     ([Cooler status works], [`RS_4011`/`4012` track `CMD_4011`/`4012`; temperatures respond per @sec-equations eq. 16]),
-    ([Trends display expected process behaviour], [Engineering Trends (@sec-interface) show smooth, physically plausible transients, not step discontinuities]),
+    ([Trends display expected process behaviour], [Engineering Trends (@sec-interface) show smooth transients consistent with the implemented rate limits, first-order lags, and process equations (@sec-equations), without unintended numerical discontinuities]),
     ([Unload/reload works], [Opening/closing `FC_3002` produces the response documented under "Open/Close Bypass" in @sec-plc-interface]),
   )
 )
@@ -93,7 +97,7 @@ prove the PLC's sequence logic is correct --- that is a separate validation step
   ([Check], [Expected observation]),
   (
     ([Immediate trip handling works], [ESDs and blowdown respond to the PLC's shutdown outputs without waiting for a normal-stop sequence]),
-    ([Safe output commands occur], [Command tags reach their documented fail-safe direction (@sec-plc-interface, "Command Polarity")]),
+    ([Configured fail-state commands occur], [Command tags reach their documented configured fail directions (@sec-plc-interface, "Command Polarity")]),
     ([Restart is inhibited until correct reset/recovery], [Project-specific / engineer-defined --- the simulator does not itself gate restart on any reset philosophy]),
   )
 )

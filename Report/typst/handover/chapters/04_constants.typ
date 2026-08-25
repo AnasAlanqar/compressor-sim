@@ -25,7 +25,7 @@ bypass closed (75% AO), suction valve at 45%, both coolers running, both ESDs op
 closed. All mass flows balance to under $1 times 10^(-3)$ kg/s at this point — the model's
 primary acceptance criterion (@sec-verification).
 
-== Constants — full parameter set (`backend/config.yaml`)
+== Constants — Configured Model Parameter Set
 
 #data-table(
   ([Constant], [Value], [Meaning]),
@@ -58,22 +58,22 @@ primary acceptance criterion (@sec-verification).
     ([$P_(o i l","p r e l u b e)$], [55 psig], [Prelube pressure target]),
     ([$P_(o i l","f a u l t)$], [25 psig], [Forced value under the "low lube oil" fault]),
     ([$tau_(o i l","p)$], [3 s], [Lube oil pressure lag time constant]),
-    ([$tau_(o i l","s l o w)$], [900 s], [Slow-lube-build fault time constant — differs from the predecessor model, see `DISCREPANCIES.md`]),
+    ([$tau_(o i l","s l o w)$], [900 s], [Slow-lube-build fault time constant — the predecessor model used 90 s for the same fault]),
     ([$tau_(e o i l)$], [400 s], [Engine oil temperature lag time constant]),
     ([$T_(e o i l","r u n)$], [190 °F], [Running engine oil temperature target]),
     ([Cooling lookup tables], [see the table under @eq-fans], [Fan-count → target temperature, 3 tables]),
     ([$tau_(T","c y l)$], [45 s], [Cylinder discharge temperature lag]),
     ([$tau_(T","o i l)$], [300 s], [Compressor oil temperature lag]),
     ([$tau_(T","a c)$], [60 s], [Aftercooler outlet temperature lag]),
-    ([`cyl_temp_offset_F`], [0, 0, +3, −2 °F], [Static per-cylinder calibration offset (Cyls 1–4), cosmetic]),
-    ([`status_feedback_tau_s`], [1.0 s], [Cooler run-status feedback lag (contactor pickup/dropout stand-in)]),
-    ([`jw_offset_F`], [−15 °F], [Engine jacket-water temp offset from engine oil temp]),
-    ([`engine.oil_run_psig`], [60 psig], [CAT ADEM engine oil pressure at rated speed]),
-    ([`watchdog_timeout_s`], [2.0 s], [OPC UA link watchdog timeout]),
+    ([Cylinder temperature offset], [0, 0, +3, −2 °F], [Static per-cylinder calibration offset (Cyls 1–4), cosmetic]),
+    ([Cooler status feedback lag], [1.0 s], [Cooler run-status feedback lag (contactor pickup/dropout stand-in)]),
+    ([Jacket-water offset], [−15 °F], [Engine jacket-water temp offset from engine oil temp]),
+    ([Engine oil pressure, running], [60 psig], [CAT ADEM engine oil pressure at rated speed]),
+    ([Link watchdog timeout], [2.0 s], [OPC UA link watchdog timeout]),
   )
 )
 
-== Transmitter Ranges (instrumentation boundary, `tags.py`)
+== Transmitter Ranges — PLC Instrumentation Interface
 
 #data-table(
   ([Tag], [Range]),
@@ -91,5 +91,8 @@ primary acceptance criterion (@sec-verification).
 )
 
 Every analog value is clamped to its transmitter range before being written to the PLC — a
-blocked discharge can drive the internal model well past 2000 psig, but the PLC sees a
-saturated 2000, exactly as a real transmitter would report.
+blocked discharge can drive the internal model well past 2000 psig, but the value written to the
+PLC is limited to the configured transmitter range, so the PLC sees a saturated 2000. This is
+consistent with the configured transmitter range-clamping behaviour implemented in the
+simulator's instrumentation layer; it is not a claim about how any specific real transmitter
+model behaves.

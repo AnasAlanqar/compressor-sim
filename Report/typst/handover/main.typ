@@ -28,6 +28,7 @@
     #include "chapters/04_constants.typ"
     #include "chapters/05_limitations.typ"
     #include "chapters/06_verification.typ"
+    #include "chapters/06a_system_requirements.typ"
     #include "chapters/07_installation.typ"
     #include "chapters/08_opc_connection.typ"
     #include "chapters/08a_plc_roadmap.typ"
