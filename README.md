@@ -15,6 +15,28 @@ All sequencing and alarm/shutdown logic belongs to the PLC under test; the
 simulator's job is to produce the pressures, temperatures, and flows that a
 real skid would produce and let the PLC react to them.
 
+## Screenshots
+
+![Compressor train running, dark theme](Report/images/features/fig20_hmi_home_dark_theme_running.png)
+*Animated P&ID of the three-stage train, running (dark theme).*
+
+| Stopped, light theme | Engineering trends |
+|---|---|
+| ![Home, stopped](Report/images/opc/fig01_hmi_home_compressor_train_stopped.png) | ![Engineering trends](Report/images/features/fig19_hmi_engineering_trends_pressures.png) |
+
+| Connect to PLC (CODESYS over OPC UA) | Fault injection |
+|---|---|
+| ![Connect to PLC](Report/images/opc/fig08_hmi_connect_to_plc_connected_remote_codesys.png) | ![Faults tab](Report/images/features/fig21_hmi_faults_tab_engine_process.png) |
+
+## Documentation
+
+- **[Handover Report (PDF)](Report/Compressor_Simulator_Handover_Report.pdf)** —
+  design basis, installation, OPC UA connection, operator interface, fault
+  injection, troubleshooting, and the full signal/tag list.
+  Markdown source: [docs/Compressor_Simulator_Handover_Report.md](docs/Compressor_Simulator_Handover_Report.md).
+- [APP_SPEC](docs/APP_SPEC.md) — physics model, tag map, UI specification.
+- [DESKTOP_APP](docs/DESKTOP_APP.md) — packaging and installer.
+
 ## Architecture
 
 ```
